@@ -50,7 +50,7 @@ bool Tflow::init(bool quiet, Encoder* enc, unsigned int width,
   width_ = width;
   height_ = height;
 
-  frame_len_ = width_ * height_ * channels_;
+  frame_len_ = ALIGN_16B(width_) * ALIGN_16B(height_) * channels_;
 
   model_fname_ = filename;
   model_threads_ = threads;

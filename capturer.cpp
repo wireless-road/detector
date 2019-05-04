@@ -306,7 +306,7 @@ bool Capturer::waitingToRun() {
     }
 
     // Make scratch buf
-    unsigned int len = width_ * height_ * channels_;
+    unsigned int len = ALIGN_16B(width_) * ALIGN_16B(height_) * channels_;
     dbgMsg("make scratch buffer: size=%d\n", len);
     for (unsigned int i = 0; i < scratchbuf_num_; i++) {
       scratchbuf_.push_back(

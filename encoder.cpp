@@ -221,7 +221,7 @@ bool Encoder::waitingToRun() {
 
     // create frame pool
     dbgMsg("create frame pool\n");
-    frame_len_ = width_ * height_ * channels_;
+    frame_len_ = ALIGN_16B(width_) * ALIGN_16B(height_) * channels_;
     for (unsigned int i = 0; i < frame_num_; i++) {
       frame_pool_.push(std::shared_ptr<Encoder::Frame>(new Encoder::Frame()));
     }
@@ -291,8 +291,8 @@ bool Encoder::waitingToRun() {
     port_def.format.video.nFrameWidth = width_;
     port_def.format.video.nFrameHeight = height_;
     port_def.format.video.xFramerate = framerate_ << 16;
-    port_def.format.video.nSliceHeight = port_def.format.video.nFrameHeight;
-    port_def.format.video.nStride = port_def.format.video.nFrameWidth;
+    port_def.format.video.nSliceHeight = ALIGN_16B(port_def.format.video.nFrameHeight);
+    port_def.format.video.nStride = ALIGN_16B(port_def.format.video.nFrameWidth);
     port_def.format.video.eColorFormat = OMX_COLOR_Format24bitBGR888;
     err = OMX_SetParameter(omx_hnd_, OMX_IndexParamPortDefinition, &port_def);
     if (err != OMX_ErrorNone) {
