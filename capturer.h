@@ -60,6 +60,7 @@ class Capturer : public Base {
     unsigned int framerate_;
     unsigned int width_;
     unsigned int height_;
+    const unsigned int channels_ = {3};
     bool width_flip_;
     bool height_flip_;
 
@@ -68,11 +69,7 @@ class Capturer : public Base {
     unsigned int pix_height_;
 
     std::vector<int> formats_ = {
-      V4L2_PIX_FMT_YUV420,    // in order of preference
-      V4L2_PIX_FMT_YUYV,
-      V4L2_PIX_FMT_YVYU,
-      V4L2_PIX_FMT_NV12,
-      V4L2_PIX_FMT_NV21
+      V4L2_PIX_FMT_RGB24   // in order of preference
     };
 
     unsigned int frame_cnt_;
@@ -97,12 +94,9 @@ class Capturer : public Base {
 
     int xioctl(int fd, int request, void* arg);
 
-    Differ differ_convert_;
-
 #ifdef CAPTURE_ONE_RAW_FRAME
     const unsigned int capture_cnt_ = {10};
     FILE* fd_raw_;
-    FILE* fd_conv_;
     void captureFrame(FILE* fd, int fmt, unsigned int len, unsigned char* buf);
 #endif
 };

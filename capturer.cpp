@@ -71,7 +71,6 @@ bool Capturer::init(bool quiet, Encoder* enc, Tflow* tfl, unsigned int device,
 
 #ifdef CAPTURE_ONE_RAW_FRAME
   fd_raw_ = nullptr;
-  fd_conv_ = nullptr;
 #endif
 
  return true;
@@ -110,7 +109,7 @@ bool Capturer::waitingToRun() {
     dbgMsg("  streaming: %s\n", (cap.capabilities & V4L2_CAP_STREAMING) ? "yes" : "no");
 #endif
 
-    pix_fmt_ = V4L2_PIX_FMT_YUV420;
+    pix_fmt_ = V4L2_PIX_FMT_RGB24;
 
     dbgMsg("v4l2 formats\n");
     struct v4l2_fmtdesc fmtdesc;
@@ -143,12 +142,6 @@ bool Capturer::waitingToRun() {
     fd_raw_ = fopen(buf, "wb");
     if (fd_raw_ == nullptr) {
       dbgMsg("failed: open raw frame file\n");
-      return false;
-    }
-    sprintf(buf, "./frm_%dx%d_%dfps_conv.yuv420", width_, height_, framerate_);
-    fd_conv_ = fopen(buf, "wb");
-    if (fd_conv_ == nullptr) {
-      dbgMsg("failed: open converted frame file\n");
       return false;
     }
 #endif
@@ -313,12 +306,12 @@ bool Capturer::waitingToRun() {
     }
 
     // Make scratch buf
-    unsigned int len = ALIGN_16B(width_) * ALIGN_16B(height_) * 3 / 2;
+    unsigned int len = width_ * height_ * channels_;
     dbgMsg("make scratch buffer: size=%d\n", len);
     for (unsigned int i = 0; i < scratchbuf_num_; i++) {
       scratchbuf_.push_back(
-          std::shared_ptr<Base::Listener::ScratchBuf>(new Base::Listener::ScratchBuf(0,len))
-          );
+          std::shared_ptr<Base::Listener::ScratchBuf>(
+            new Base::Listener::ScratchBuf(1,len)));
     }
 
     // v4l2 stream on
@@ -387,32 +380,19 @@ bool Capturer::running() {
       if (it != scratchbuf_.end()) {
         auto frm = *it;
 
-        // convert buffer
-        differ_convert_.begin();
-        unsigned int blk = ALIGN_16B(width_) * ALIGN_16B(height_);
-        unsigned int qtr_blk = blk / 4;
-        int err = libyuv::ConvertToI420(
-            frame_pool_[buf.index].addr, frame_pool_[buf.index].length,
-            frm->buf.data(), ALIGN_16B(width_),
-            frm->buf.data() + blk, ALIGN_16B(width_) / 2,
-            frm->buf.data() + blk + qtr_blk, ALIGN_16B(width_) / 2,
-            0, 0, 
-            pix_width_, pix_height_,
-            pix_width_, pix_height_,
-            libyuv::kRotate0,
-            pix_fmt_);
-        differ_convert_.end();
-        if (err != 0) {
-          dbgMsg("convert failed\n");
-        }
-
 #ifdef CAPTURE_ONE_RAW_FRAME
         // write frames
         if (frame_cnt_ == capture_cnt_) {
-          captureFrame(fd_raw_, pix_fmt_, frame_pool_[buf.index].length, frame_pool_[buf.index].addr);
-          captureFrame(fd_conv_, V4L2_PIX_FMT_YUV420, (*it)->length, (*it)->buf.data());
+          captureFrame(fd_raw_, pix_fmt_, frame_pool_[buf.index].length, 
+              frame_pool_[buf.index].addr);
         }
 #endif
+        // send frame to tflow
+        if (tfl_) {
+          if (!tfl_->addMessage(Base::Listener::Message::kScratchBuf, &frm)) {
+            dbgMsg("warning: tflow is busy\n");
+          }
+        }
 
         // send frame to encoder
         if (enc_) {
@@ -421,12 +401,6 @@ bool Capturer::running() {
           }
         }
 
-        // send frame to tflow
-        if (tfl_) {
-          if (!tfl_->addMessage(Base::Listener::Message::kScratchBuf, &frm)) {
-          dbgMsg("warning: tflow is busy\n");
-          }
-        }
       }
 
       // enqueue buffer
@@ -480,18 +454,12 @@ bool Capturer::waitingToHalt() {
     if (fd_raw_) {
       fclose(fd_raw_);
     }
-    if (fd_conv_) {
-      fclose(fd_conv_);
-    }
 #endif
 
     // report
     if (!quiet_) {
       fprintf(stderr, "\n\nCapturer Results...\n");
       fprintf(stderr, "  number of frames captured: %d\n", frame_cnt_); 
-      fprintf(stderr, "  image convert time (us):   high:%u avg:%u low:%u frames:%d\n", 
-          differ_convert_.getHigh_usec(), differ_convert_.getAvg_usec(), 
-          differ_convert_.getLow_usec(),differ_convert_.getCnt());
     }
   }
 

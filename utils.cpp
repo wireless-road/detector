@@ -323,6 +323,13 @@ bool drawYUVBox(unsigned int thick,
   return true;
 }
 
+bool drawRGBBox(unsigned int thick, unsigned char* dst,
+    unsigned int width, unsigned int height,
+    unsigned int x, unsigned int y, unsigned int w, unsigned int h,
+    unsigned char val_r, unsigned char val_g, unsigned char val_b) {
+  return true;
+}
+
 const char* BufTypeToStr(unsigned int bt) {
   switch (bt) {
     case V4L2_BUF_TYPE_VIDEO_CAPTURE:

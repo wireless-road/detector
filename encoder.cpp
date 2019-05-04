@@ -58,9 +58,6 @@ bool Encoder::init(bool quiet, Rtsp* rtsp, unsigned int framerate,
   width_ = width;
   height_ = height;
 
-  luma_len_ = ALIGN_16B(width_) * ALIGN_16B(height_);
-  chrom_len_ = luma_len_ / 4;
-
   bitrate_ = bitrate;
   output_ = output;
   testtime_ = testtime;
@@ -224,7 +221,7 @@ bool Encoder::waitingToRun() {
 
     // create frame pool
     dbgMsg("create frame pool\n");
-    frame_len_ = ALIGN_16B(width_) * ALIGN_16B(height_) * 3 / 2;
+    frame_len_ = width_ * height_ * channels_;
     for (unsigned int i = 0; i < frame_num_; i++) {
       frame_pool_.push(std::shared_ptr<Encoder::Frame>(new Encoder::Frame()));
     }
@@ -294,9 +291,9 @@ bool Encoder::waitingToRun() {
     port_def.format.video.nFrameWidth = width_;
     port_def.format.video.nFrameHeight = height_;
     port_def.format.video.xFramerate = framerate_ << 16;
-    port_def.format.video.nSliceHeight = ALIGN_16B(port_def.format.video.nFrameHeight);
-    port_def.format.video.nStride = ALIGN_16B(port_def.format.video.nFrameWidth);
-    port_def.format.video.eColorFormat = OMX_COLOR_FormatYUV420PackedPlanar;
+    port_def.format.video.nSliceHeight = port_def.format.video.nFrameHeight;
+    port_def.format.video.nStride = port_def.format.video.nFrameWidth;
+    port_def.format.video.eColorFormat = OMX_COLOR_Format24bitRGB888;
     err = OMX_SetParameter(omx_hnd_, OMX_IndexParamPortDefinition, &port_def);
     if (err != OMX_ErrorNone) {
       dbgMsg("failed: set omx paramter port 200\n");
@@ -417,20 +414,18 @@ void Encoder::overlay(std::shared_ptr<Encoder::Frame> frame) {
     if (targets_->size() != 0) {
       std::for_each(targets_->begin(), targets_->end(),
           [=](Base::Listener::BoxBuf const & box) {
-          Encoder::YUV yuv;
+          Encoder::RGB rgb;
             if (box.type == Base::Listener::BoxBuf::Type::kPerson) {
-              yuv = red_yuv_;
+              rgb = red_rgb_;
             } else if (box.type == Base::Listener::BoxBuf::Type::kPet) {
-              yuv = green_yuv_;
+              rgb = green_rgb_;
             } else {
-              yuv = blue_yuv_;
+              rgb = blue_rgb_;
             }
-            drawYUVBox(thickness_,
-                frame->scratch->buf.data(), width_, 
-                frame->scratch->buf.data() + luma_len_, width_ / 2,
-                frame->scratch->buf.data() + luma_len_ + chrom_len_, width_ / 2,
+            drawRGBBox(thickness_, frame->scratch->buf.data(), 
+                width_, height_,
                 box.x, box.y, box.w, box.h,
-                yuv.y, yuv.u, yuv.v);
+                rgb.r, rgb.g, rgb.b);
           });
     }
   }

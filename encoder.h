@@ -73,28 +73,27 @@ class Encoder : public Base, Base::Listener {
     unsigned int framerate_;
     unsigned int width_;
     unsigned int height_;
-    unsigned int luma_len_;
-    unsigned int chrom_len_;
+    const unsigned int channels_ = {3};
     unsigned int bitrate_;
     std::string output_;
     unsigned int testtime_;
 
-    class YUV {
+    class RGB {
       public:
-        YUV()
-          : y(255), u(255), v(255) {}
-        YUV(unsigned char luma, unsigned char cr, unsigned char cb) 
-          : y(luma), u(cr), v(cb) {}
-        YUV(Encoder::YUV const& yuv) = default;
-        ~YUV() {}
+        RGB()
+          : r(128), g(128), b(128) {}
+        RGB(unsigned char red, unsigned char grn, unsigned char blu) 
+          : r(red), g(grn), b(blu) {}
+        RGB(Encoder::RGB const& rgb) = default;
+        ~RGB() {}
       public:
-        unsigned char y;
-        unsigned char u;
-        unsigned char v;
+        unsigned char r;
+        unsigned char g;
+        unsigned char b;
     };
-    const Encoder::YUV red_yuv_   = { 76,  84, 255};
-    const Encoder::YUV green_yuv_ = {149,  43,  21};
-    const Encoder::YUV blue_yuv_  = { 29, 255, 107};
+    const Encoder::RGB red_rgb_   = {255,   0,   0};
+    const Encoder::RGB green_rgb_ = {  0, 255,   0};
+    const Encoder::RGB blue_rgb_  = {  0,   0, 255};
 
     FILE* fd_enc_;
 
@@ -121,7 +120,7 @@ class Encoder : public Base, Base::Listener {
     };
 
     std::timed_mutex frame_lock_;
-    const unsigned int frame_num_ = 3;
+    const unsigned int frame_num_ = {3};
     unsigned int frame_len_;
     std::queue<std::shared_ptr<Encoder::Frame>> frame_pool_;
     std::queue<std::shared_ptr<Encoder::Frame>> frame_work_;

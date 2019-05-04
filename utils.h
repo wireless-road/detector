@@ -64,6 +64,11 @@ bool drawYUVBox(unsigned int thick,
     unsigned int x, unsigned int y, unsigned int w, unsigned int h,
     unsigned char val_y, unsigned char val_u, unsigned char val_v);
 
+bool drawRGBBox(unsigned int thick, unsigned char* dst,
+    unsigned int width, unsigned int height,
+    unsigned int x, unsigned int y, unsigned int w, unsigned int h,
+    unsigned char val_r, unsigned char val_g, unsigned char val_b);
+
 const char* BufTypeToStr(unsigned int bt);
 const char* BufFieldToStr(unsigned int bf);
 const char* BufTimecodeTypeToStr(unsigned int tt);
