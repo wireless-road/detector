@@ -1,0 +1,6 @@
+tracker
+*.o
+frm_*
+*.h264
+*.swp
+
