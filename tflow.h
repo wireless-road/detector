@@ -69,21 +69,22 @@ class Tflow : public Base, Base::Listener {
 
     std::string model_fname_;
     unsigned int model_threads_;
-    std::unique_ptr<tflite::FlatBufferModel> model_;
-    std::unique_ptr<tflite::Interpreter> interpreter_;
 
     class Frame {
       public:
         Frame() = delete;
-        Frame(char c, unsigned int sz) 
-          : name(c), id(0), rgb(sz),
+        Frame(char c, 
+            std::unique_ptr<tflite::FlatBufferModel>& m,
+            std::unique_ptr<tflite::Interpreter>& i) 
+          : name(c), model(std::move(m)), interpreter(std::move(i)),
             differ_image(), differ_eval(), 
             fut() {}
         ~Frame() {}
       public:
         char name;
-        unsigned int id;
-        std::vector<unsigned char> rgb;
+        std::unique_ptr<tflite::FlatBufferModel> model;
+        std::unique_ptr<tflite::Interpreter> interpreter;
+        std::shared_ptr<Base::Listener::ScratchBuf> scratch;
         Differ differ_image;
         Differ differ_eval;
         std::future<bool> fut;

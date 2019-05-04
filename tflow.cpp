@@ -60,7 +60,6 @@ bool Tflow::init(bool quiet, Encoder* enc, unsigned int width,
   return true; 
 }
 
-//static unsigned int save_rgb = 10;
 bool Tflow::addMessage(Base::Listener::Message msg, void* data) {
 
   if (msg != Base::Listener::Message::kScratchBuf) {
@@ -71,43 +70,27 @@ bool Tflow::addMessage(Base::Listener::Message msg, void* data) {
   std::unique_lock<std::timed_mutex> lck(engine_lock_, std::defer_lock);
 
   if (!lck.try_lock_for(std::chrono::microseconds(Base::Listener::timeout_))) {
-//    dbgMsg("tflow busy\n");
+    dbgMsg("tflow busy\n");
     return false;
   }
 
   if (engine_pool_.size() == 0) {
-//    dbgMsg("no tflow buffers available\n");
+    dbgMsg("no tflow buffers available\n");
     return false;
   }
 
   auto scratch = *static_cast<std::shared_ptr<Base::Listener::ScratchBuf>*>(data);
+  if (frame_len_ != scratch->length) {
+    dbgMsg("tflow buffer size mismatch\n");
+    return false;
+  }
 
   differ_copy_.begin();
   auto frame = engine_pool_.front();
   engine_pool_.pop();
-  frame->id = scratch->id;
-//  dbgMsg("convert\n");
-  convert_yuv420_to_rgb24(scratch->buf.data(), frame->rgb.data(), width_, height_);
+  frame->scratch = scratch;
   engine_work_.push(frame);
   differ_copy_.end();
-
-#if 0
-  if (save_rgb != 0) {
-    save_rgb--;
-    if (save_rgb == 0) {
-      char buf[100];
-      sprintf(buf, "./frm_%dx%d.rgb", width_, height_);
-      FILE* fd = fopen(buf, "wb");
-      if (fd == nullptr) {
-        dbgMsg("failed: open rgb frame file\n");
-        return false;
-      }
-      dbgMsg("write\n");
-      fwrite(frame->rgb.data(), 1, width_ * height_ * channels_, fd);
-      fclose(fd);
-    }
-  }
-#endif
 
   return true;
 }
@@ -116,19 +99,18 @@ bool Tflow::waitingToRun() {
 
   if (!tflow_on_) {
 
-    model_ = tflite::FlatBufferModel::BuildFromFile(model_fname_.c_str());
-
-    tflite::ops::builtin::BuiltinOpResolver resolver;
-    tflite::InterpreterBuilder builder(*model_, resolver);
-    builder(&interpreter_);
-
-    interpreter_->UseNNAPI(true);
-    interpreter_->SetNumThreads(model_threads_);
-
     for (unsigned int i = 0; i < engine_num_; i++) {
-      engine_pool_.push(
-          std::shared_ptr<Tflow::Frame>(
-            new Tflow::Frame( 'A' + i, width_ * height_ * channels_)));
+      auto model = tflite::FlatBufferModel::BuildFromFile(model_fname_.c_str());
+      tflite::ops::builtin::BuiltinOpResolver resolver;
+      std::unique_ptr<tflite::Interpreter> interpreter;
+      tflite::InterpreterBuilder builder(*model, resolver);
+      builder(&interpreter);
+
+      interpreter->UseNNAPI(true);
+      interpreter->SetNumThreads(model_threads_);
+
+      engine_pool_.push(std::shared_ptr<Tflow::Frame>(
+            new Tflow::Frame( 'A' + i, model, interpreter)));
     }
 
     tflow_on_ = true;
@@ -188,25 +170,25 @@ bool Tflow::oneRun(bool report) {
     engine_work_.pop();
 
     engine_pile_.push(frame);
-//    frame->fut = std::async(std::launch::async, Tflow::eval0, this, frame.get());
+    frame->fut = std::async(std::launch::async, Tflow::eval0, this, frame.get());
 
   // check for data in process
   } else if (engine_pile_.size() != 0) {
 
     auto frame = engine_pile_.front();
 
-//    if (frame->fut.wait_for(
-//          std::chrono::microseconds(eval_timeout_)) == std::future_status::ready) {
+    if (frame->fut.wait_for(
+          std::chrono::microseconds(eval_timeout_)) == std::future_status::ready) {
       engine_pile_.pop();
 
-//      bool result = frame->fut.get();
+      bool result = frame->fut.get();
 
-//      if (result) {
-//        post(result, frame->id, report);
-//      }
-//      frame->scratch = std::shared_ptr<Base::Listener::ScratchBuf>(new Base::Listener::ScratchBuf());
+      if (result) {
+        post(result, frame->scratch->id, report);
+      }
+      frame->scratch = std::shared_ptr<Base::Listener::ScratchBuf>(new Base::Listener::ScratchBuf());
       engine_pool_.push(frame);
-//    }
+    }
   }
 
   return true;
