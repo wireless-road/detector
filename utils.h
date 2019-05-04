@@ -51,13 +51,13 @@ void convert_to_yuv420(int fmt,
 void convert_yuv420_to_rgb24(unsigned char* src, unsigned char* dst, 
     unsigned int width, unsigned int height);
 
-bool drawHorizontalLine(unsigned int thick, 
+bool drawYUVHorizontalLine(unsigned int thick, 
     unsigned char* start, unsigned int stride, 
     unsigned int width, unsigned char val);
-bool drawVerticalLine(unsigned int thick, 
+bool drawYUVVerticalLine(unsigned int thick, 
     unsigned char* start, unsigned int stride, 
     unsigned int height, unsigned char val);
-bool drawBox(unsigned int thick,
+bool drawYUVBox(unsigned int thick,
     unsigned char* dst_y, unsigned int dst_stride_y,
     unsigned char* dst_u, unsigned int dst_stride_u,
     unsigned char* dst_v, unsigned int dst_stride_v,

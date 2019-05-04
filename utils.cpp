@@ -250,7 +250,7 @@ void convert_yuv420_to_rgb24(unsigned char* src, unsigned char* dst,
   }
 }
 
-bool drawHorizontalLine(unsigned int thick, unsigned char* start, 
+bool drawYUVHorizontalLine(unsigned int thick, unsigned char* start, 
     unsigned int stride, unsigned int width, unsigned char val) {
 
   for (unsigned int i = 0; i < thick; i++) {
@@ -260,7 +260,7 @@ bool drawHorizontalLine(unsigned int thick, unsigned char* start,
   return true;
 }
 
-bool drawVerticalLine(unsigned int thick, unsigned char* start, 
+bool drawYUVVerticalLine(unsigned int thick, unsigned char* start, 
     unsigned int stride, unsigned int height, unsigned char val) {
 
   for (unsigned int i = 0; i < height; i++) {
@@ -270,7 +270,7 @@ bool drawVerticalLine(unsigned int thick, unsigned char* start,
   return true;
 }
 
-bool drawBox(unsigned int thick,
+bool drawYUVBox(unsigned int thick,
     unsigned char* dst_y, unsigned int dst_stride_y,
     unsigned char* dst_u, unsigned int dst_stride_u,
     unsigned char* dst_v, unsigned int dst_stride_v,
@@ -295,29 +295,29 @@ bool drawBox(unsigned int thick,
   }
 
   // draw horizontal lines
-  drawHorizontalLine(thick, start_y, dst_stride_y, width, val_y);
-  drawHorizontalLine(thick, start_y + (height - thick) * dst_stride_y, 
+  drawYUVHorizontalLine(thick, start_y, dst_stride_y, width, val_y);
+  drawYUVHorizontalLine(thick, start_y + (height - thick) * dst_stride_y, 
       dst_stride_y, width, val_y);
 
-  drawHorizontalLine(half_thick, start_u, dst_stride_u, half_width, val_u);
-  drawHorizontalLine(half_thick, start_u + (half_height - half_thick) * dst_stride_u, 
+  drawYUVHorizontalLine(half_thick, start_u, dst_stride_u, half_width, val_u);
+  drawYUVHorizontalLine(half_thick, start_u + (half_height - half_thick) * dst_stride_u, 
       dst_stride_u, half_width, val_u);
 
-  drawHorizontalLine(half_thick, start_v, dst_stride_v, half_width, val_v);
-  drawHorizontalLine(half_thick, start_v + (half_height - half_thick) * dst_stride_v, 
+  drawYUVHorizontalLine(half_thick, start_v, dst_stride_v, half_width, val_v);
+  drawYUVHorizontalLine(half_thick, start_v + (half_height - half_thick) * dst_stride_v, 
       dst_stride_v, half_width, val_v);
 
   // draw vertical lines
-  drawVerticalLine(thick, start_y, dst_stride_y, height, val_y);
-  drawVerticalLine(thick, start_y + width - thick, 
+  drawYUVVerticalLine(thick, start_y, dst_stride_y, height, val_y);
+  drawYUVVerticalLine(thick, start_y + width - thick, 
       dst_stride_y, height, val_y);
 
-  drawVerticalLine(half_thick, start_u, dst_stride_u, half_height, val_u);
-  drawVerticalLine(half_thick, start_u + half_width - half_thick,
+  drawYUVVerticalLine(half_thick, start_u, dst_stride_u, half_height, val_u);
+  drawYUVVerticalLine(half_thick, start_u + half_width - half_thick,
       dst_stride_u, half_height, val_u);
 
-  drawVerticalLine(half_thick, start_v, dst_stride_v, half_height, val_v);
-  drawVerticalLine(half_thick, start_v + half_width - half_thick,
+  drawYUVVerticalLine(half_thick, start_v, dst_stride_v, half_height, val_v);
+  drawYUVVerticalLine(half_thick, start_v + half_width - half_thick,
       dst_stride_v, half_height, val_v);
 
   return true;

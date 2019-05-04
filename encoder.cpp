@@ -425,7 +425,7 @@ void Encoder::overlay(std::shared_ptr<Encoder::Frame> frame) {
             } else {
               yuv = blue_yuv_;
             }
-            drawBox(thickness_,
+            drawYUVBox(thickness_,
                 frame->scratch->buf.data(), width_, 
                 frame->scratch->buf.data() + luma_len_, width_ / 2,
                 frame->scratch->buf.data() + luma_len_ + chrom_len_, width_ / 2,
