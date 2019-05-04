@@ -293,7 +293,7 @@ bool Encoder::waitingToRun() {
     port_def.format.video.xFramerate = framerate_ << 16;
     port_def.format.video.nSliceHeight = port_def.format.video.nFrameHeight;
     port_def.format.video.nStride = port_def.format.video.nFrameWidth;
-    port_def.format.video.eColorFormat = OMX_COLOR_Format24bitRGB888;
+    port_def.format.video.eColorFormat = OMX_COLOR_Format24bitBGR888;
     err = OMX_SetParameter(omx_hnd_, OMX_IndexParamPortDefinition, &port_def);
     if (err != OMX_ErrorNone) {
       dbgMsg("failed: set omx paramter port 200\n");

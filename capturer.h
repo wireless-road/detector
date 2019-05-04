@@ -29,7 +29,7 @@
 #include "encoder.h"
 #include "tflow.h"
 
-#include "libyuv.h"
+//#include "libyuv.h"
 
 namespace tracker {
 

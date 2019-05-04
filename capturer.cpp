@@ -380,6 +380,10 @@ bool Capturer::running() {
       if (it != scratchbuf_.end()) {
         auto frm = *it;
 
+        frm->id = frame_pool_[buf.index].id;
+        std::memcpy(frm->buf.data(), frame_pool_[buf.index].addr, 
+            frame_pool_[buf.index].length);
+
 #ifdef CAPTURE_ONE_RAW_FRAME
         // write frames
         if (frame_cnt_ == capture_cnt_) {
