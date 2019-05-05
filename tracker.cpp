@@ -147,14 +147,14 @@ int main(int argc, char** argv) {
   }
   enc = Encoder::create(yield_time, quiet, rtsp.get(), framerate, 
       std::abs(wdth), std::abs(hght), bitrate, output, testtime);
-  tfl = Tflow::create(50*yield_time, quiet, enc.get(), std::abs(wdth), std::abs(hght), 
-    "./models/detect.tflite", 4);
+  tfl = Tflow::create(50 * yield_time, quiet, enc.get(), std::abs(wdth), 
+      std::abs(hght), "./models/detect.tflite", 4);
   cap = Capturer::create(yield_time, quiet, enc.get(), tfl.get(), 
       device, framerate, wdth, hght);
 
   // start
   dbgMsg("start\n");
-  if (streaming) { rtsp->start("rtsp", 80); }
+  if (streaming) { rtsp->start("rtsp", 90); }
   enc->start("enc", 50);
   tfl->start("tfl", 20);
   cap->start("cap", 90);

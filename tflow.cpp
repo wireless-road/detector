@@ -81,10 +81,12 @@ bool Tflow::addMessage(Base::Listener::Message msg, void* data) {
       dbgMsg("tflow buffer size mismatch\n");
       return false;
     }
+    differ_copy_.begin();
     frame_.id = buf->id;
     frame_.length = buf->length;
     std::memcpy(frame_.buf.data(), buf->addr, buf->length);
     tflow_empty_ = false;
+    differ_copy_.end();
   }
 
   return true;
@@ -138,7 +140,7 @@ bool Tflow::oneRun(bool report) {
   std::unique_lock<std::timed_mutex> lck(tflow_lock_);
 
   if (!tflow_empty_) {
-    differ_image_.begin();
+    differ_prep_.begin();
     int input = interpreter_->inputs()[0];
     const std::vector<int> inputs = interpreter_->inputs();
     const std::vector<int> outputs = interpreter_->outputs();
@@ -168,7 +170,7 @@ bool Tflow::oneRun(bool report) {
         dbgMsg("unrecognized output\n");
         break;
     }
-    differ_image_.end();
+    differ_prep_.end();
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 #if 0
@@ -224,9 +226,12 @@ bool Tflow::waitingToHalt() {
     // report
     if (!quiet_) {
       fprintf(stderr, "\n\nTflow Results...\n");
+      fprintf(stderr, "  image copy time (us): high:%u avg:%u low:%u frames:%d\n", 
+          differ_copy_.getHigh_usec(), differ_copy_.getAvg_usec(), 
+          differ_copy_.getLow_usec(),differ_copy_.getCnt());
       fprintf(stderr, "  image prep time (us): high:%u avg:%u low:%u frames:%d\n", 
-          differ_image_.getHigh_usec(), differ_image_.getAvg_usec(), 
-          differ_image_.getLow_usec(), differ_image_.getCnt());
+          differ_prep_.getHigh_usec(), differ_prep_.getAvg_usec(), 
+          differ_prep_.getLow_usec(), differ_prep_.getCnt());
       fprintf(stderr, "  image eval time (us): high:%u avg:%u low:%u frames:%d\n", 
           differ_eval_.getHigh_usec(), differ_eval_.getAvg_usec(), 
           differ_eval_.getLow_usec(), differ_eval_.getCnt());

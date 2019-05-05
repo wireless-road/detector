@@ -116,7 +116,7 @@ class Base {
             unsigned char* addr;
         };
       public:
-        const unsigned int timeout_ = {2000};
+        const unsigned int timeout_ = {1000};
         virtual bool addMessage(Message msg, void* data) = 0;
     };
 

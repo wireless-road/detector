@@ -158,7 +158,8 @@ class Tflow : public Base, Base::Listener {
     std::unique_ptr<tflite::FlatBufferModel> model_;
     std::unique_ptr<tflite::Interpreter> interpreter_;
 
-    Differ differ_image_;
+    Differ differ_copy_;
+    Differ differ_prep_;
     Differ differ_eval_;
 
     unsigned int post_id_ = {0};
