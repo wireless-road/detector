@@ -59,6 +59,8 @@ void usage() {
   std::cout << "  (b)itrate    = encoder bitrate     (default = 1000000)" << std::endl;
   std::cout << "  (y)ield time = yield time          (default = 1000usec)" << std::endl;
   std::cout << "  thr(e)ads    = number of tflow threads (default = 1)" << std::endl;
+  std::cout << "  (m)odel      = path to model       (default = ./models/detect.tflite)" << std::endl;
+  std::cout << "  (l)abels     = path to labels      (default = ./models/labelmap.txt)" << std::endl;
   std::cout << "  output       = output file name"                      << std::endl;
   std::cout << "               = leave blank for stdout"                << std::endl;
   std::cout << "               = no output if testtime is 0"            << std::endl;
@@ -92,11 +94,13 @@ int main(int argc, char** argv) {
            int hght = 480;
   unsigned int bitrate = 1000000;
   unsigned int threads = 1;
+  std::string  model = "./models/detect.tflite";
+  std::string  labels = "./models/labelmap.txt";
   std::string  output;
 
   // cmd line options
   int c;
-  while((c = getopt(argc, argv, ":qru:t:d:f:w:h:b:y:e:")) != -1) {
+  while((c = getopt(argc, argv, ":qru:t:d:f:w:h:b:y:e:m:l:")) != -1) {
     switch (c) {
       case 'q': quiet     = true;               break;
       case 'r': streaming = true;               break;
@@ -109,6 +113,8 @@ int main(int argc, char** argv) {
       case 'b': bitrate   = std::stoul(optarg); break;
       case 'y': yield_time= std::stoul(optarg); break;
       case 'e': threads   = std::stoul(optarg); break;
+      case 'm': model     = optarg;             break;
+      case 'l': labels    = optarg;             break;
 
       case '?':
       default:  usage(); return 0;
@@ -144,6 +150,8 @@ int main(int argc, char** argv) {
     fprintf(stderr, "     bitrate: %d bps\n", bitrate);
     fprintf(stderr, "  yield time: %d usec\n", yield_time);
     fprintf(stderr, "     threads: %d\n", threads);
+    fprintf(stderr, "       model: %s\n", model.c_str());
+    fprintf(stderr, "      lables: %s\n", labels.c_str());
     fprintf(stderr, "      output: %s\n\n", (testtime == 0) ? "none" : output.c_str());
     fprintf(stderr, "         pid: top -H -p %d\n\n", getpid());
   }
@@ -155,7 +163,7 @@ int main(int argc, char** argv) {
   enc = Encoder::create(yield_time, quiet, rtsp.get(), framerate, 
       std::abs(wdth), std::abs(hght), bitrate, output, testtime);
   tfl = Tflow::create(50 * yield_time, quiet, enc.get(), std::abs(wdth), 
-      std::abs(hght), "./models/detect.tflite", threads);
+      std::abs(hght), model.c_str(), labels.c_str(), threads);
   cap = Capturer::create(yield_time, quiet, enc.get(), tfl.get(), 
       device, framerate, wdth, hght);
 

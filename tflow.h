@@ -114,8 +114,8 @@ void resize(T* out, uint8_t* in, int image_height, int image_width,
 class Tflow : public Base, Base::Listener {
   public:
     static std::unique_ptr<Tflow> create(unsigned int yield_time, bool quiet, 
-        Encoder* enc, unsigned int width, unsigned int height, const char* filename,
-        unsigned int threads);
+        Encoder* enc, unsigned int width, unsigned int height, const char* model,
+        const char* labels, unsigned int threads);
     virtual ~Tflow();
 
   public:
@@ -125,7 +125,8 @@ class Tflow : public Base, Base::Listener {
     Tflow() = delete;
     Tflow(unsigned int yield_time);
     bool init(bool quiet, Encoder* enc, unsigned int width, 
-        unsigned int height, const char* filename, unsigned int threads);
+        unsigned int height, const char* model, const char* labels, 
+        unsigned int threads);
 
   protected:
     virtual bool waitingToRun();
@@ -141,6 +142,7 @@ class Tflow : public Base, Base::Listener {
     const unsigned int channels_ = {3};
 
     std::string model_fname_;
+    std::string labels_fname_;
     unsigned int model_threads_;
 
     class Frame {

@@ -34,14 +34,15 @@ Tflow::~Tflow() {
 
 std::unique_ptr<Tflow> Tflow::create(unsigned int yield_time, bool quiet, 
     Encoder* enc, unsigned int width, unsigned int height, 
-    const char* filename, unsigned int threads) {
+    const char* model, const char* labels, unsigned int threads) {
   auto obj = std::unique_ptr<Tflow>(new Tflow(yield_time));
-  obj->init(quiet, enc, width, height, filename, threads);
+  obj->init(quiet, enc, width, height, model, labels, threads);
   return obj;
 }
 
 bool Tflow::init(bool quiet, Encoder* enc, unsigned int width, 
-    unsigned int height, const char* filename, unsigned int threads) {
+    unsigned int height, const char* model, const char* labels, 
+    unsigned int threads) {
 
   quiet_ = quiet;
 
@@ -53,7 +54,8 @@ bool Tflow::init(bool quiet, Encoder* enc, unsigned int width,
   frame_len_ = ALIGN_16B(width_) * ALIGN_16B(height_) * channels_;
   frame_.buf.resize(frame_len_);
 
-  model_fname_ = filename;
+  model_fname_ = model;
+  labels_fname_ = labels;
   model_threads_ = threads;
 
   tflow_on_ = false;
