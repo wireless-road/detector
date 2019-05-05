@@ -43,23 +43,25 @@ void usage() {
   std::cout << "version: 0.5"                  << std::endl;
   std::cout                                    << std::endl;
   std::cout << "  where:"                      << std::endl;
-  std::cout << "  ?           = this screen"                           << std::endl;
-  std::cout << "  (q)uiet     = suppress messages   (default = false)" << std::endl;
-  std::cout << "  (r)tsp      = rtsp server         (default = off)"   << std::endl;
-  std::cout << "  (u)nicast   = rtsp unicast addr   (default = none)"  << std::endl;
-  std::cout << "              = multicast if no address specified"     << std::endl;
-  std::cout << "  (t)esttime  = test duration       (default = 30sec)" << std::endl;
-  std::cout << "              = 0 to run until ctrl-c"                 << std::endl;
-  std::cout << "  (d)device   = video device num    (default = 0)"     << std::endl;
-  std::cout << "  (f)ramerate = capture framerate   (default = 20)"    << std::endl;
-  std::cout << "  (w)idth     = capture width       (default = 640)"   << std::endl;
-  std::cout << "              = negative value means flip"             << std::endl;
-  std::cout << "  (h)eight    = capture height      (default = 480)"   << std::endl;
-  std::cout << "              = negative value means flip"             << std::endl;
-  std::cout << "  (b)itrate   = encoder bitrate     (default = 1000000)" << std::endl;
-  std::cout << "  output      = output file name"                      << std::endl;
-  std::cout << "              = leave blank for stdout"                << std::endl;
-  std::cout << "              = no output if testtime is 0"            << std::endl;
+  std::cout << "  ?            = this screen"                           << std::endl;
+  std::cout << "  (q)uiet      = suppress messages   (default = false)" << std::endl;
+  std::cout << "  (r)tsp       = rtsp server         (default = off)"   << std::endl;
+  std::cout << "  (u)nicast    = rtsp unicast addr   (default = none)"  << std::endl;
+  std::cout << "               = multicast if no address specified"     << std::endl;
+  std::cout << "  (t)esttime   = test duration       (default = 30sec)" << std::endl;
+  std::cout << "               = 0 to run until ctrl-c"                 << std::endl;
+  std::cout << "  (d)device    = video device num    (default = 0)"     << std::endl;
+  std::cout << "  (f)ramerate  = capture framerate   (default = 20)"    << std::endl;
+  std::cout << "  (w)idth      = capture width       (default = 640)"   << std::endl;
+  std::cout << "               = negative value means flip"             << std::endl;
+  std::cout << "  (h)eight     = capture height      (default = 480)"   << std::endl;
+  std::cout << "               = negative value means flip"             << std::endl;
+  std::cout << "  (b)itrate    = encoder bitrate     (default = 1000000)" << std::endl;
+  std::cout << "  (y)ield time = yield time          (default = 1000usec)" << std::endl;
+  std::cout << "  thr(e)ads    = number of tflow threads (default = 1)" << std::endl;
+  std::cout << "  output       = output file name"                      << std::endl;
+  std::cout << "               = leave blank for stdout"                << std::endl;
+  std::cout << "               = no output if testtime is 0"            << std::endl;
 }
 
 void quitHandler(int s) {
@@ -89,11 +91,12 @@ int main(int argc, char** argv) {
            int wdth = 640;
            int hght = 480;
   unsigned int bitrate = 1000000;
+  unsigned int threads = 1;
   std::string  output;
 
   // cmd line options
   int c;
-  while((c = getopt(argc, argv, ":qru:t:d:f:w:h:b:")) != -1) {
+  while((c = getopt(argc, argv, ":qru:t:d:f:w:h:b:y:e:")) != -1) {
     switch (c) {
       case 'q': quiet     = true;               break;
       case 'r': streaming = true;               break;
@@ -104,6 +107,8 @@ int main(int argc, char** argv) {
       case 'w': wdth      = std::stoi(optarg);  break;
       case 'h': hght      = std::stoi(optarg);  break;
       case 'b': bitrate   = std::stoul(optarg); break;
+      case 'y': yield_time= std::stoul(optarg); break;
+      case 'e': threads   = std::stoul(optarg); break;
 
       case '?':
       default:  usage(); return 0;
@@ -137,6 +142,8 @@ int main(int argc, char** argv) {
     fprintf(stderr, "       width: %d pix %s\n", std::abs(wdth), (wdth < 0) ? "(flipped)" : "" );
     fprintf(stderr, "      height: %d pix %s\n", std::abs(hght), (hght < 0) ? "(flipped)" : "" );
     fprintf(stderr, "     bitrate: %d bps\n", bitrate);
+    fprintf(stderr, "  yield time: %d usec\n", yield_time);
+    fprintf(stderr, "     threads: %d\n", threads);
     fprintf(stderr, "      output: %s\n\n", (testtime == 0) ? "none" : output.c_str());
     fprintf(stderr, "         pid: top -H -p %d\n\n", getpid());
   }
@@ -148,7 +155,7 @@ int main(int argc, char** argv) {
   enc = Encoder::create(yield_time, quiet, rtsp.get(), framerate, 
       std::abs(wdth), std::abs(hght), bitrate, output, testtime);
   tfl = Tflow::create(50 * yield_time, quiet, enc.get(), std::abs(wdth), 
-      std::abs(hght), "./models/detect.tflite", 4);
+      std::abs(hght), "./models/detect.tflite", threads);
   cap = Capturer::create(yield_time, quiet, enc.get(), tfl.get(), 
       device, framerate, wdth, hght);
 

@@ -159,12 +159,14 @@ bool Tflow::oneRun(bool report) {
       case kTfLiteFloat32:
         resize<float>(interpreter_->typed_tensor<float>(input),
             frame_.buf.data(), height_, width_, channels_,
-            wanted_height, wanted_width, wanted_channels, true, 127.5f, 127.5f);
+            wanted_height, wanted_width, wanted_channels, model_threads_,
+            true, 127.5f, 127.5f);
         break;
       case kTfLiteUInt8:
         resize<uint8_t>(interpreter_->typed_tensor<uint8_t>(input),
             frame_.buf.data(), height_, width_, channels_,
-            wanted_height, wanted_width, wanted_channels, false, 0, 0);
+            wanted_height, wanted_width, wanted_channels, model_threads_,
+            false, 0, 0);
         break;
       default:
         dbgMsg("unrecognized output\n");

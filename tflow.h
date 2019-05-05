@@ -41,14 +41,14 @@ namespace tracker {
 template <class T>
 void resize(T* out, uint8_t* in, int image_height, int image_width,
             int image_channels, int wanted_height, int wanted_width,
-            int wanted_channels, bool is_float, float input_mean, 
-            float input_std) {
+            int wanted_channels, int threads, bool is_float, 
+            float input_mean, float input_std) {
 
   int number_of_pixels = image_height * image_width * image_channels;
   std::unique_ptr<tflite::Interpreter> interpreter(new tflite::Interpreter);
 
   interpreter->UseNNAPI(false);
-  interpreter->SetNumThreads(1);
+  interpreter->SetNumThreads(threads);
   int base_index = 0;
 
   // two inputs: input and new_sizes
