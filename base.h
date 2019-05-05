@@ -71,22 +71,19 @@ class Base {
         virtual ~Listener() {}
       public:
         enum class Message {
-          kScratchBuf,  // sent as shared pointer to ScratchBuf
-          kBoxBuf,      // sent as shared pointer to vector of BoxBuf
+          kFrameBuf,
+          kBoxBuf,  // sent as shared pointer to vector of BoxBuf
           kNalBuf
         };  
-        class ScratchBuf {
+        class FrameBuf {
           public:
-            ScratchBuf() 
-              : id(0), buf(0) {}
-            ScratchBuf(unsigned int i, unsigned int len)
-              : id(i), length(len), buf(len) {}
-            ~ScratchBuf() {}
+            FrameBuf() : id(0), length(0), addr(nullptr) {}
+            ~FrameBuf() {}
           public:
             unsigned int id;
             unsigned int length;
-            std::vector<unsigned char> buf;
-        };
+            unsigned char* addr;
+        };        
         class BoxBuf {
           public:
             enum class Type {

@@ -73,26 +73,13 @@ class Capturer : public Base {
     unsigned int frame_cnt_;
     int fd_video_;
 
-    class Frame {
-      public:
-        Frame() {}
-        ~Frame() {}
-      public:
-        unsigned int id;
-        unsigned int length;
-        unsigned char* addr;
-    };
-    const unsigned int frame_num_ = {3};
-    std::vector<Capturer::Frame> frame_pool_;
-
-    const unsigned int scratchbuf_num_ = {6};
-    std::vector<std::shared_ptr<Base::Listener::ScratchBuf>> scratchbuf_;
+    const unsigned int framebuf_num_ = {3};
+    std::vector<Base::Listener::FrameBuf> framebuf_pool_;
 
     std::atomic<bool> stream_on_;
 
     int xioctl(int fd, int request, void* arg);
 
-    Differ differ_cpy_;
     Differ differ_enc_;
     Differ differ_tfl_;
 

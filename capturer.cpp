@@ -36,7 +36,7 @@ namespace tracker {
 
 Capturer::Capturer(unsigned int yieldtime) 
   : Base(yieldtime), 
-    frame_pool_(frame_num_) {
+    framebuf_pool_(framebuf_num_) {
 }
 
 Capturer::~Capturer() {
@@ -264,14 +264,14 @@ bool Capturer::waitingToRun() {
     memset(&rb, 0, sizeof(rb));
     rb.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     rb.memory = V4L2_MEMORY_MMAP;
-    rb.count = frame_num_;
+    rb.count = framebuf_num_;
     res = xioctl(fd_video_, VIDIOC_REQBUFS, &rb);
     if (res < 0) {
       dbgMsg("  failed: request buffers (errno: %d)", errno);
       return false;
     }
     dbgMsg("  buffer count: %d\n", rb.count);
-    for (unsigned int i = 0; i < frame_num_; i++) {
+    for (unsigned int i = 0; i < framebuf_num_; i++) {
       struct v4l2_buffer buf;
       memset(&buf, 0, sizeof(buf));
       buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -282,16 +282,16 @@ bool Capturer::waitingToRun() {
         dbgMsg("  failed: query buffer %d (errno: %d)\n", i, errno);
         return false;
       }
-      frame_pool_[i].addr = (unsigned char*)mmap(nullptr, 
+      framebuf_pool_[i].addr = (unsigned char*)mmap(nullptr, 
             buf.length, PROT_READ|PROT_WRITE, MAP_SHARED, fd_video_, buf.m.offset);
-      if (frame_pool_[i].addr == MAP_FAILED) {
+      if (framebuf_pool_[i].addr == MAP_FAILED) {
         dbgMsg("  failed: make buffer %d (error: %d)\n", i, errno);
-        frame_pool_[i].addr = 0;
+        framebuf_pool_[i].addr = 0;
         return false;
       }
-      frame_pool_[i].length = buf.length;
+      framebuf_pool_[i].length = buf.length;
     }
-    for (unsigned int i = 0; i < frame_num_; i++) {
+    for (unsigned int i = 0; i < framebuf_num_; i++) {
       struct v4l2_buffer buf;
       memset(&buf, 0, sizeof(buf));
       buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -303,15 +303,6 @@ bool Capturer::waitingToRun() {
         return false;
       }
       dbgMsg("  buffer %d queued.  size: %zu\n", i, buf.length);
-    }
-
-    // Make scratch buf
-    unsigned int len = ALIGN_16B(width_) * ALIGN_16B(height_) * channels_;
-    dbgMsg("make scratch buffer: size=%d\n", len);
-    for (unsigned int i = 0; i < scratchbuf_num_; i++) {
-      scratchbuf_.push_back(
-          std::shared_ptr<Base::Listener::ScratchBuf>(
-            new Base::Listener::ScratchBuf(1,len)));
     }
 
     // v4l2 stream on
@@ -370,47 +361,31 @@ bool Capturer::running() {
         return false;
       }
 
-      frame_pool_[buf.index].id = frame_cnt_++;
-
-      // find free buffer
-      auto it = std::find_if(scratchbuf_.begin(), scratchbuf_.end(),
-        [](std::shared_ptr<Base::Listener::ScratchBuf> const & scratch) -> bool 
-          { return scratch.unique(); });
-
-      if (it != scratchbuf_.end()) {
-        auto frm = *it;
-
-        differ_cpy_.begin();
-        frm->id = frame_pool_[buf.index].id;
-        std::memcpy(frm->buf.data(), frame_pool_[buf.index].addr, 
-            frame_pool_[buf.index].length);
-        differ_cpy_.end();
+      framebuf_pool_[buf.index].id = frame_cnt_++;
 
 #ifdef CAPTURE_ONE_RAW_FRAME
-        // write frames
-        if (frame_cnt_ == capture_cnt_) {
-          captureFrame(fd_raw_, pix_fmt_, frame_pool_[buf.index].length, 
-              frame_pool_[buf.index].addr);
-        }
+      // write frames
+      if (frame_cnt_ == capture_cnt_) {
+        captureFrame(fd_raw_, pix_fmt_, framebuf_pool_[buf.index].length, 
+            framebuf_pool_[buf.index].addr);
+      }
 #endif
-        // send frame to tflow
-        if (tfl_) {
-          differ_tfl_.begin();
-          if (!tfl_->addMessage(Base::Listener::Message::kScratchBuf, &frm)) {
-//            dbgMsg("warning: tflow is busy\n");
-          }
-          differ_tfl_.end();
+      // send frame to tflow
+      if (tfl_) {
+        differ_tfl_.begin();
+        if (!tfl_->addMessage(Base::Listener::Message::kFrameBuf, &framebuf_pool_[buf.index])) {
+//          dbgMsg("warning: tflow is busy\n");
         }
+        differ_tfl_.end();
+      }
 
-        // send frame to encoder
-        if (enc_) {
-          differ_enc_.begin();
-          if (!enc_->addMessage(Base::Listener::Message::kScratchBuf, &frm)) {
-//            dbgMsg("warning: encoder is busy\n");
-          }
-          differ_enc_.end();
+      // send frame to encoder
+      if (enc_) {
+        differ_enc_.begin();
+        if (!enc_->addMessage(Base::Listener::Message::kFrameBuf, &framebuf_pool_[buf.index])) {
+//          dbgMsg("warning: encoder is busy\n");
         }
-
+        differ_enc_.end();
       }
 
       // enqueue buffer
@@ -444,13 +419,13 @@ bool Capturer::waitingToHalt() {
 
     // return v4l2 buffers
     dbgMsg("return v4l2 buffers\n");
-    for (unsigned int i = 0; i < frame_num_; i++) {
-      if (frame_pool_[i].addr != 0) {
-        int res = munmap(frame_pool_[i].addr, frame_pool_[i].length);
+    for (unsigned int i = 0; i < framebuf_num_; i++) {
+      if (framebuf_pool_[i].addr != 0) {
+        int res = munmap(framebuf_pool_[i].addr, framebuf_pool_[i].length);
         if (res < 0) {
           dbgMsg("failed: unmap buffer: %d (errno: %d)", i, errno);
         }  
-        frame_pool_[i].addr = 0;
+        framebuf_pool_[i].addr = 0;
       }
     }
 
@@ -470,9 +445,6 @@ bool Capturer::waitingToHalt() {
     if (!quiet_) {
       fprintf(stderr, "\n\nCapturer Results...\n");
       fprintf(stderr, "  number of frames captured: %d\n", frame_cnt_); 
-      fprintf(stderr, "  image copy time (us): high:%u avg:%u low:%u frames:%d\n", 
-          differ_cpy_.getHigh_usec(), differ_cpy_.getAvg_usec(), 
-          differ_cpy_.getLow_usec(),  differ_cpy_.getCnt());
       fprintf(stderr, "  tflow copy time (us): high:%u avg:%u low:%u frames:%d\n", 
           differ_tfl_.getHigh_usec(), differ_tfl_.getAvg_usec(), 
           differ_tfl_.getLow_usec(),  differ_tfl_.getCnt());

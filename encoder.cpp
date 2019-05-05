@@ -57,6 +57,7 @@ bool Encoder::init(bool quiet, Rtsp* rtsp, unsigned int framerate,
   framerate_ = framerate;
   width_ = width;
   height_ = height;
+  frame_len_ = ALIGN_16B(width_) * ALIGN_16B(height_) * channels_;
 
   bitrate_ = bitrate;
   output_ = output;
@@ -69,13 +70,13 @@ bool Encoder::init(bool quiet, Rtsp* rtsp, unsigned int framerate,
 
 bool Encoder::addMessage(Base::Listener::Message msg, void* data) {
 
-  if (msg != Base::Listener::Message::kScratchBuf &&
+  if (msg != Base::Listener::Message::kFrameBuf &&
       msg != Base::Listener::Message::kBoxBuf) {
     dbgMsg("encoder message not recognized\n");
     return false;
   }
 
-  if (msg == Base::Listener::Message::kScratchBuf) {
+  if (msg == Base::Listener::Message::kFrameBuf) {
     std::unique_lock<std::timed_mutex> lck(frame_lock_, std::defer_lock);
 
     if (!lck.try_lock_for(std::chrono::microseconds(Base::Listener::timeout_))) {
@@ -88,8 +89,8 @@ bool Encoder::addMessage(Base::Listener::Message msg, void* data) {
       return false;
     }
 
-    auto scratch = *static_cast<std::shared_ptr<Base::Listener::ScratchBuf>*>(data);
-    if (frame_len_ != scratch->length) {
+    auto buf = static_cast<Base::Listener::FrameBuf*>(data);
+    if (frame_len_ != buf->length) {
       dbgMsg("encoder buffer size mismatch\n");
       return false;
     }
@@ -97,7 +98,9 @@ bool Encoder::addMessage(Base::Listener::Message msg, void* data) {
     differ_copy_.begin();
     auto frame = frame_pool_.front();
     frame_pool_.pop();
-    frame->scratch = scratch;
+    frame->id = buf->id;
+    frame->length = buf->length;
+    std::memcpy(frame->buf.data(), buf->addr, buf->length);
     frame_work_.push(frame);
     differ_copy_.end();
 
@@ -221,9 +224,8 @@ bool Encoder::waitingToRun() {
 
     // create frame pool
     dbgMsg("create frame pool\n");
-    frame_len_ = ALIGN_16B(width_) * ALIGN_16B(height_) * channels_;
     for (unsigned int i = 0; i < frame_num_; i++) {
-      frame_pool_.push(std::shared_ptr<Encoder::Frame>(new Encoder::Frame()));
+      frame_pool_.push(std::shared_ptr<Encoder::Frame>(new Encoder::Frame(frame_len_)));
     }
 
     // init bcm
@@ -422,7 +424,7 @@ void Encoder::overlay(std::shared_ptr<Encoder::Frame> frame) {
             } else {
               rgb = blue_rgb_;
             }
-            drawRGBBox(thickness_, frame->scratch->buf.data(), 
+            drawRGBBox(thickness_, frame->buf.data(), 
                 width_, height_,
                 box.x, box.y, box.w, box.h,
                 rgb.r, rgb.g, rgb.b);
@@ -445,14 +447,12 @@ bool Encoder::running() {
         overlay(frame);
 
         // fill the input buffer
-        std::memcpy(omx_buf_in_->pBuffer, frame->scratch->buf.data(), frame->scratch->length);
+        std::memcpy(omx_buf_in_->pBuffer, frame->buf.data(), frame->length);
         omx_buf_in_->nOffset = 0;
-        omx_buf_in_->nFilledLen = frame->scratch->length;
+        omx_buf_in_->nFilledLen = frame->length;
 
         // return the frame to the queue
         frame_work_.pop();
-        frame->scratch = 
-          std::shared_ptr<Base::Listener::ScratchBuf>(new Base::Listener::ScratchBuf());
         frame_pool_.push(frame);
 
         // let capture fill another buffer while we wait

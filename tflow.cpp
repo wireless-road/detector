@@ -51,6 +51,7 @@ bool Tflow::init(bool quiet, Encoder* enc, unsigned int width,
   height_ = height;
 
   frame_len_ = ALIGN_16B(width_) * ALIGN_16B(height_) * channels_;
+  frame_.buf.resize(frame_len_);
 
   model_fname_ = filename;
   model_threads_ = threads;
@@ -62,7 +63,7 @@ bool Tflow::init(bool quiet, Encoder* enc, unsigned int width,
 
 bool Tflow::addMessage(Base::Listener::Message msg, void* data) {
 
-  if (msg != Base::Listener::Message::kScratchBuf) {
+  if (msg != Base::Listener::Message::kFrameBuf) {
     dbgMsg("tflow message not recognized\n");
     return false;
   }
@@ -70,17 +71,19 @@ bool Tflow::addMessage(Base::Listener::Message msg, void* data) {
   std::unique_lock<std::timed_mutex> lck(tflow_lock_, std::defer_lock);
 
   if (!lck.try_lock_for(std::chrono::microseconds(Base::Listener::timeout_))) {
-    dbgMsg("tflow busy\n");
+//    dbgMsg("tflow busy\n");
     return false;
   }
 
   if (tflow_empty_) {
-    auto buf = *static_cast<std::shared_ptr<Base::Listener::ScratchBuf>*>(data);
+    auto buf = static_cast<Base::Listener::FrameBuf*>(data);
     if (frame_len_ != buf->length) {
       dbgMsg("tflow buffer size mismatch\n");
       return false;
     }
-    scratch_ = buf;
+    frame_.id = buf->id;
+    frame_.length = buf->length;
+    std::memcpy(frame_.buf.data(), buf->addr, buf->length);
     tflow_empty_ = false;
   }
 
@@ -149,21 +152,16 @@ bool Tflow::oneRun(bool report) {
     int wanted_width = dims->data[2];
     int wanted_channels = dims->data[3];
 
-//    dbgMsg("wanted dims:  w:%d, h:%d, chn:%d\n", wanted_width, wanted_height,
-//        wanted_channels);
-
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     switch (interpreter_->tensor(input)->type) {
       case kTfLiteFloat32:
-//        dbgMsg("float output\n");
         resize<float>(interpreter_->typed_tensor<float>(input),
-            scratch_->buf.data(), height_, width_, channels_,
+            frame_.buf.data(), height_, width_, channels_,
             wanted_height, wanted_width, wanted_channels, true, 127.5f, 127.5f);
         break;
       case kTfLiteUInt8:
-//        dbgMsg("uint8 output\n");
         resize<uint8_t>(interpreter_->typed_tensor<uint8_t>(input),
-            scratch_->buf.data(), height_, width_, channels_,
+            frame_.buf.data(), height_, width_, channels_,
             wanted_height, wanted_width, wanted_channels, false, 0, 0);
         break;
       default:
@@ -195,7 +193,6 @@ bool Tflow::oneRun(bool report) {
     differ_eval_.end();
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-    scratch_ = std::shared_ptr<Base::Listener::ScratchBuf>(new Base::Listener::ScratchBuf());
     tflow_empty_ = true;
   }
 

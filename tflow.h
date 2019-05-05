@@ -99,7 +99,6 @@ void resize(T* out, uint8_t* in, int image_height, int image_width,
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
   interpreter->Invoke();
 
-#if 0
   auto output = interpreter->typed_tensor<float>(2);
   auto output_number_of_pixels = wanted_height * wanted_width * wanted_channels;
 
@@ -110,7 +109,6 @@ void resize(T* out, uint8_t* in, int image_height, int image_width,
       out[i] = (uint8_t)output[i];
     }
   }
-#endif
 }
 
 class Tflow : public Base, Base::Listener {
@@ -141,14 +139,25 @@ class Tflow : public Base, Base::Listener {
     unsigned int width_;
     unsigned int height_;
     const unsigned int channels_ = {3};
-    unsigned int frame_len_;
 
     std::string model_fname_;
     unsigned int model_threads_;
 
+    class Frame {
+      public:
+        Frame() {}
+        ~Frame() {}
+      public:
+        unsigned int id;
+        unsigned int length;
+        std::vector<unsigned char> buf;
+    };
+    unsigned int frame_len_;
+    Tflow::Frame frame_;
+
     std::unique_ptr<tflite::FlatBufferModel> model_;
     std::unique_ptr<tflite::Interpreter> interpreter_;
-    std::shared_ptr<Base::Listener::ScratchBuf> scratch_;
+
     Differ differ_image_;
     Differ differ_eval_;
 

@@ -113,10 +113,14 @@ class Encoder : public Base, Base::Listener {
 
     class Frame {
       public:
-        Frame() : scratch(nullptr) {}
+        Frame() = delete;
+        Frame(unsigned int len) 
+          : id(0), length(len), buf(len) {}
         ~Frame() {}
       public:
-        std::shared_ptr<Base::Listener::ScratchBuf> scratch;
+        unsigned int id;
+        unsigned int length;
+        std::vector<unsigned char> buf;
     };
 
     std::timed_mutex frame_lock_;
