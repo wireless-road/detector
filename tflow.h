@@ -96,6 +96,7 @@ void resize(T* out, uint8_t* in, int image_height, int image_width,
   interpreter->typed_tensor<int>(1)[0] = wanted_height;
   interpreter->typed_tensor<int>(1)[1] = wanted_width;
 
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
   interpreter->Invoke();
 
 #if 0

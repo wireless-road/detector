@@ -98,7 +98,6 @@ bool Tflow::waitingToRun() {
 
     interpreter_->UseNNAPI(false);
     interpreter_->SetNumThreads(model_threads_);
-//    interpreter_->SetNumThreads(1);
 
     tflow_on_ = true;
   }
@@ -153,6 +152,7 @@ bool Tflow::oneRun(bool report) {
 //    dbgMsg("wanted dims:  w:%d, h:%d, chn:%d\n", wanted_width, wanted_height,
 //        wanted_channels);
 
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     switch (interpreter_->tensor(input)->type) {
       case kTfLiteFloat32:
 //        dbgMsg("float output\n");
@@ -171,6 +171,7 @@ bool Tflow::oneRun(bool report) {
         break;
     }
     differ_image_.end();
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 #if 0
     if (counter != 0) {
@@ -192,6 +193,7 @@ bool Tflow::oneRun(bool report) {
     differ_eval_.begin();
     interpreter_->Invoke();
     differ_eval_.end();
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     scratch_ = std::shared_ptr<Base::Listener::ScratchBuf>(new Base::Listener::ScratchBuf());
     tflow_empty_ = true;
