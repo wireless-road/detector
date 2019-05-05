@@ -29,8 +29,6 @@
 #include "encoder.h"
 #include "tflow.h"
 
-//#include "libyuv.h"
-
 namespace tracker {
 
 class Capturer : public Base {

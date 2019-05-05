@@ -77,7 +77,7 @@ bool Tflow::addMessage(Base::Listener::Message msg, void* data) {
   }
 
   if (engine_pool_.size() == 0) {
-    dbgMsg("no tflow buffers available\n");
+//    dbgMsg("no tflow buffers available\n");
     return false;
   }
 
@@ -87,12 +87,10 @@ bool Tflow::addMessage(Base::Listener::Message msg, void* data) {
     return false;
   }
 
-  differ_copy_.begin();
   auto frame = engine_pool_.front();
   engine_pool_.pop();
   frame->scratch = scratch;
   engine_work_.push(frame);
-  differ_copy_.end();
 
   return true;
 }
@@ -108,8 +106,9 @@ bool Tflow::waitingToRun() {
       tflite::InterpreterBuilder builder(*model, resolver);
       builder(&interpreter);
 
-      interpreter->UseNNAPI(true);
-      interpreter->SetNumThreads(model_threads_);
+      interpreter->UseNNAPI(false);
+//      interpreter->SetNumThreads(model_threads_);
+      interpreter->SetNumThreads(1);
 
       engine_pool_.push(std::shared_ptr<Tflow::Frame>(
             new Tflow::Frame( 'A' + i, model, interpreter)));
@@ -120,16 +119,65 @@ bool Tflow::waitingToRun() {
 
   return true;
 }
+
+//unsigned int counter = 10;
 bool Tflow::eval(Tflow::Frame* frame) {
 
-  // create tflow input
   frame->differ_image.begin();
-  // todo: prepare tflow image
+  int input = frame->interpreter->inputs()[0];
+  const std::vector<int> inputs = frame->interpreter->inputs();
+  const std::vector<int> outputs = frame->interpreter->outputs();
+
+  if (frame->interpreter->AllocateTensors() != kTfLiteOk) {
+    dbgMsg("allocatetensors failed\n");
+  }
+
+  TfLiteIntArray* dims = frame->interpreter->tensor(input)->dims;
+  int wanted_height = dims->data[1];
+  int wanted_width = dims->data[2];
+  int wanted_channels = dims->data[3];
+
+//  dbgMsg("wanted dims:  w:%d, h:%d, chn:%d\n", wanted_width, wanted_height,
+//      wanted_channels);
+
+  switch (frame->interpreter->tensor(input)->type) {
+    case kTfLiteFloat32:
+//      dbgMsg("float output\n");
+      resize<float>(frame->interpreter->typed_tensor<float>(input),
+          frame->scratch->buf.data(), height_, width_, channels_,
+          wanted_height, wanted_width, wanted_channels, true, 127.5f, 127.5f);
+      break;
+    case kTfLiteUInt8:
+//      dbgMsg("uint8 output\n");
+      resize<uint8_t>(frame->interpreter->typed_tensor<uint8_t>(input),
+          frame->scratch->buf.data(), height_, width_, channels_,
+          wanted_height, wanted_width, wanted_channels, false, 0, 0);
+      break;
+    default:
+      dbgMsg("unrecognized output\n");
+      break;
+  }
   frame->differ_image.end();
 
-  // evaluate with tflow
+#if 0
+  if (counter != 0) {
+    counter--;
+    if (counter == 0) {
+      FILE* fd = fopen("resize.out", "wb");
+      if (fd == nullptr) {
+        dbgMsg("failed: open resize frame file\n");
+      }
+      
+      dbgMsg("***writing resized picture\n");
+      fwrite(frame->interpreter->typed_tensor<uint8_t>(input), 1, 
+          wanted_height * wanted_width * wanted_channels, fd);
+      fclose(fd);
+    }
+  }
+#endif
+
   frame->differ_eval.begin();
-  // evaluate image
+  frame->interpreter->Invoke();
   frame->differ_eval.end();
   return true;
 }
@@ -200,8 +248,6 @@ bool Tflow::running() {
   if (tflow_on_) {
     return oneRun(true);
   }
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
   return true;
 }
 
@@ -222,10 +268,6 @@ bool Tflow::waitingToHalt() {
     // report
     if (!quiet_) {
       fprintf(stderr, "\n\nTflow Results...\n");
-      fprintf(stderr, "  image copy time (us): high:%u avg:%u low:%u frames:%d\n\n", 
-          differ_copy_.getHigh_usec(), differ_copy_.getAvg_usec(), differ_copy_.getLow_usec(),
-          differ_copy_.getCnt());
-
       std::vector<std::shared_ptr<Tflow::Frame>> vec;
       while (engine_pool_.size()) {
         auto frame = engine_pool_.front();

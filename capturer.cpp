@@ -394,14 +394,14 @@ bool Capturer::running() {
         // send frame to tflow
         if (tfl_) {
           if (!tfl_->addMessage(Base::Listener::Message::kScratchBuf, &frm)) {
-            dbgMsg("warning: tflow is busy\n");
+//            dbgMsg("warning: tflow is busy\n");
           }
         }
 
         // send frame to encoder
         if (enc_) {
           if (!enc_->addMessage(Base::Listener::Message::kScratchBuf, &frm)) {
-            dbgMsg("warning: encoder is busy\n");
+//            dbgMsg("warning: encoder is busy\n");
           }
         }
 

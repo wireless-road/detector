@@ -307,7 +307,6 @@ void Rtsp::afterPlay(void* data) {
 
 bool Rtsp::running() {
   if (rtsp_on_) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   return true;
 }

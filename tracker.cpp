@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
   bool quiet = false;
   bool streaming = false;
   std::string  unicast;
-  unsigned int yield_time = 10000;
+  unsigned int yield_time = 1000;
   unsigned int testtime = 30;
   unsigned int device = 0;
   unsigned int framerate = 20;
@@ -138,6 +138,7 @@ int main(int argc, char** argv) {
     fprintf(stderr, "      height: %d pix %s\n", std::abs(hght), (hght < 0) ? "(flipped)" : "" );
     fprintf(stderr, "     bitrate: %d bps\n", bitrate);
     fprintf(stderr, "      output: %s\n\n", (testtime == 0) ? "none" : output.c_str());
+    fprintf(stderr, "         pid: top -H -p %d\n\n", getpid());
   }
 
   // create worker threads
@@ -146,17 +147,17 @@ int main(int argc, char** argv) {
   }
   enc = Encoder::create(yield_time, quiet, rtsp.get(), framerate, 
       std::abs(wdth), std::abs(hght), bitrate, output, testtime);
-  tfl = Tflow::create(yield_time, quiet, enc.get(), std::abs(wdth), std::abs(hght), 
+  tfl = Tflow::create(50*yield_time, quiet, enc.get(), std::abs(wdth), std::abs(hght), 
     "./models/detect.tflite", 1, 1);
   cap = Capturer::create(yield_time, quiet, enc.get(), tfl.get(), 
       device, framerate, wdth, hght);
 
   // start
   dbgMsg("start\n");
-  if (streaming) { rtsp->start("rtsp"); }
-  enc->start("enc");
-  tfl->start("tfl");
-  cap->start("cap");
+  if (streaming) { rtsp->start("rtsp", 80); }
+  enc->start("enc", 90);
+  tfl->start("tfl", 20);
+  cap->start("cap", 80);
 
   // run
   dbgMsg("run\n");
