@@ -94,15 +94,14 @@ class Base {
             };
           public: 
             BoxBuf() = delete;
-            BoxBuf(BoxBuf::Type t, unsigned int i, unsigned int f, unsigned int left, 
+            BoxBuf(BoxBuf::Type t, unsigned int i, unsigned int left, 
                 unsigned int top, unsigned int width, unsigned int height) 
-              : type(t), id(i), frame(f), x(left), y(top), w(width), h(height) {}
+              : type(t), id(i), x(left), y(top), w(width), h(height) {}
             BoxBuf(BoxBuf const & b) = default;
             ~BoxBuf() {}
           public:
             BoxBuf::Type type;
             unsigned int id;
-            unsigned int frame;
             unsigned int x, y, w, h;
         };
         class NalBuf {

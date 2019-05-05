@@ -241,9 +241,9 @@ bool Tflow::oneRun(bool report) {
           new std::vector<Base::Listener::BoxBuf>);
 
     const std::vector<int>& res = interpreter_->outputs();
-    float* locs = interpreter_->tensor(res[0])->data.f;
-    float* clas = interpreter_->tensor(res[1])->data.f;
-    float* scor = interpreter_->tensor(res[2])->data.f;
+    float* locs = tflite::GetTensorData<float>(interpreter_->tensor(res[0]));
+    float* clas = tflite::GetTensorData<float>(interpreter_->tensor(res[1]));
+    float* scor = tflite::GetTensorData<float>(interpreter_->tensor(res[2]));
     for (unsigned int i = 0; i < result_num_; i++) {
       unsigned int cls = static_cast<unsigned int>(clas[i]);
       if (cls >= 1 && cls <= 91) {
@@ -260,16 +260,17 @@ bool Tflow::oneRun(bool report) {
                     return pr.first == cls;
                   });
 
+              auto btype = Base::Listener::BoxBuf::Type::kUnknown;
+              if (it != labels_.end()) {
+                btype = (*it).second;
+              }
+
 #if DEBUG_MESSAGES
-              dbgMsg("%d: t:%f,l:%f,b:%f,r:%f, scor:%f, class:%d (boxbuf type:%d)\n",
-                  i, 
-                  locs[i], locs[i+1], locs[i+2], locs[i+3],
-                  scor[i], cls, 
-                  (it == labels_.end()) ? 
-                    (int)Base::Listener::BoxBuf::Type::kUnknown : (int)((*it).second));
+              dbgMsg("t:%f,l:%f,b:%f,r:%f, scor:%f, class:%d (boxbuf type:%s)\n",
+                  t, l, b, r, scor[i], cls, boxBufTypeStr(btype));
 #else
               if (report && !quiet) {
-                fprintf(stderr, "<%s>", boxBufTypeStr((*it).second));
+                fprintf(stderr, "<%s>", boxBufTypeStr(btype));
                 fflush(stderr);
               }
 #endif
@@ -281,9 +282,7 @@ bool Tflow::oneRun(bool report) {
               unsigned int height = bottom - top;
 
               boxes->push_back(Base::Listener::BoxBuf(
-                  (*it).second,
-                  frame_.id, frame_.id,
-                  left, top, width, height));
+                  btype, frame_.id, left, top, width, height));
             }
           }
         }

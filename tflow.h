@@ -34,6 +34,7 @@
 #include <tensorflow/lite/builtin_op_data.h>
 #include <tensorflow/lite/interpreter.h>
 #include <tensorflow/lite/kernels/register.h>
+#include <tensorflow/lite/kernels/internal/tensor_ctypes.h>
 #include <tensorflow/lite/model.h>
 
 namespace tracker {
