@@ -25,7 +25,8 @@
 namespace tracker {
 
 Tflow::Tflow(unsigned int yield_time) 
-  : Base(yield_time) {
+  : Base(yield_time),
+    tflow_empty_(true) {
 }
 
 Tflow::~Tflow() {
@@ -33,15 +34,14 @@ Tflow::~Tflow() {
 
 std::unique_ptr<Tflow> Tflow::create(unsigned int yield_time, bool quiet, 
     Encoder* enc, unsigned int width, unsigned int height, 
-    const char* filename, unsigned int threads, unsigned int engines) {
+    const char* filename, unsigned int threads) {
   auto obj = std::unique_ptr<Tflow>(new Tflow(yield_time));
-  obj->init(quiet, enc, width, height, filename, threads, engines);
+  obj->init(quiet, enc, width, height, filename, threads);
   return obj;
 }
 
 bool Tflow::init(bool quiet, Encoder* enc, unsigned int width, 
-    unsigned int height, const char* filename, unsigned int threads, 
-    unsigned int engines) {
+    unsigned int height, const char* filename, unsigned int threads) {
 
   quiet_ = quiet;
 
@@ -55,8 +55,6 @@ bool Tflow::init(bool quiet, Encoder* enc, unsigned int width,
   model_fname_ = filename;
   model_threads_ = threads;
 
-  engine_num_ = engines;
-
   tflow_on_ = false;
 
   return true; 
@@ -69,28 +67,22 @@ bool Tflow::addMessage(Base::Listener::Message msg, void* data) {
     return false;
   }
 
-  std::unique_lock<std::timed_mutex> lck(engine_lock_, std::defer_lock);
+  std::unique_lock<std::timed_mutex> lck(tflow_lock_, std::defer_lock);
 
   if (!lck.try_lock_for(std::chrono::microseconds(Base::Listener::timeout_))) {
     dbgMsg("tflow busy\n");
     return false;
   }
 
-  if (engine_pool_.size() == 0) {
-//    dbgMsg("no tflow buffers available\n");
-    return false;
+  if (tflow_empty_) {
+    auto buf = *static_cast<std::shared_ptr<Base::Listener::ScratchBuf>*>(data);
+    if (frame_len_ != buf->length) {
+      dbgMsg("tflow buffer size mismatch\n");
+      return false;
+    }
+    scratch_ = buf;
+    tflow_empty_ = false;
   }
-
-  auto scratch = *static_cast<std::shared_ptr<Base::Listener::ScratchBuf>*>(data);
-  if (frame_len_ != scratch->length) {
-    dbgMsg("tflow buffer size mismatch\n");
-    return false;
-  }
-
-  auto frame = engine_pool_.front();
-  engine_pool_.pop();
-  frame->scratch = scratch;
-  engine_work_.push(frame);
 
   return true;
 }
@@ -99,91 +91,19 @@ bool Tflow::waitingToRun() {
 
   if (!tflow_on_) {
 
-    for (unsigned int i = 0; i < engine_num_; i++) {
-      auto model = tflite::FlatBufferModel::BuildFromFile(model_fname_.c_str());
-      tflite::ops::builtin::BuiltinOpResolver resolver;
-      std::unique_ptr<tflite::Interpreter> interpreter;
-      tflite::InterpreterBuilder builder(*model, resolver);
-      builder(&interpreter);
+    model_ = tflite::FlatBufferModel::BuildFromFile(model_fname_.c_str());
+    tflite::ops::builtin::BuiltinOpResolver resolver;
+    tflite::InterpreterBuilder builder(*model_, resolver);
+    builder(&interpreter_);
 
-      interpreter->UseNNAPI(false);
-//      interpreter->SetNumThreads(model_threads_);
-      interpreter->SetNumThreads(1);
-
-      engine_pool_.push(std::shared_ptr<Tflow::Frame>(
-            new Tflow::Frame( 'A' + i, model, interpreter)));
-    }
+    interpreter_->UseNNAPI(false);
+    interpreter_->SetNumThreads(model_threads_);
+//    interpreter_->SetNumThreads(1);
 
     tflow_on_ = true;
   }
 
   return true;
-}
-
-//unsigned int counter = 10;
-bool Tflow::eval(Tflow::Frame* frame) {
-
-  frame->differ_image.begin();
-  int input = frame->interpreter->inputs()[0];
-  const std::vector<int> inputs = frame->interpreter->inputs();
-  const std::vector<int> outputs = frame->interpreter->outputs();
-
-  if (frame->interpreter->AllocateTensors() != kTfLiteOk) {
-    dbgMsg("allocatetensors failed\n");
-  }
-
-  TfLiteIntArray* dims = frame->interpreter->tensor(input)->dims;
-  int wanted_height = dims->data[1];
-  int wanted_width = dims->data[2];
-  int wanted_channels = dims->data[3];
-
-//  dbgMsg("wanted dims:  w:%d, h:%d, chn:%d\n", wanted_width, wanted_height,
-//      wanted_channels);
-
-  switch (frame->interpreter->tensor(input)->type) {
-    case kTfLiteFloat32:
-//      dbgMsg("float output\n");
-      resize<float>(frame->interpreter->typed_tensor<float>(input),
-          frame->scratch->buf.data(), height_, width_, channels_,
-          wanted_height, wanted_width, wanted_channels, true, 127.5f, 127.5f);
-      break;
-    case kTfLiteUInt8:
-//      dbgMsg("uint8 output\n");
-      resize<uint8_t>(frame->interpreter->typed_tensor<uint8_t>(input),
-          frame->scratch->buf.data(), height_, width_, channels_,
-          wanted_height, wanted_width, wanted_channels, false, 0, 0);
-      break;
-    default:
-      dbgMsg("unrecognized output\n");
-      break;
-  }
-  frame->differ_image.end();
-
-#if 0
-  if (counter != 0) {
-    counter--;
-    if (counter == 0) {
-      FILE* fd = fopen("resize.out", "wb");
-      if (fd == nullptr) {
-        dbgMsg("failed: open resize frame file\n");
-      }
-      
-      dbgMsg("***writing resized picture\n");
-      fwrite(frame->interpreter->typed_tensor<uint8_t>(input), 1, 
-          wanted_height * wanted_width * wanted_channels, fd);
-      fclose(fd);
-    }
-  }
-#endif
-
-  frame->differ_eval.begin();
-  frame->interpreter->Invoke();
-  frame->differ_eval.end();
-  return true;
-}
-
-bool Tflow::eval0(Tflow* self, Tflow::Frame* frame) {
-  return self->eval(frame);
 }
 
 Base::Listener::BoxBuf::Type Tflow::targetType(const char* label)
@@ -211,38 +131,75 @@ bool Tflow::post(bool result, unsigned int id, bool report) {
   return true;
 }
 
+//unsigned int counter = 10;
 bool Tflow::oneRun(bool report) {
-  std::unique_lock<std::timed_mutex> lck(engine_lock_);
+  std::unique_lock<std::timed_mutex> lck(tflow_lock_);
 
-  // check for new data
-  if (engine_work_.size() != 0) {
-    auto frame = engine_work_.front();
-    engine_work_.pop();
+  if (!tflow_empty_) {
+    differ_image_.begin();
+    int input = interpreter_->inputs()[0];
+    const std::vector<int> inputs = interpreter_->inputs();
+    const std::vector<int> outputs = interpreter_->outputs();
 
-    engine_pile_.push(frame);
-    frame->fut = std::async(std::launch::async, Tflow::eval0, this, frame.get());
-
-  // check for data in process
-  } else if (engine_pile_.size() != 0) {
-
-    auto frame = engine_pile_.front();
-
-    if (frame->fut.wait_for(
-          std::chrono::microseconds(eval_timeout_)) == std::future_status::ready) {
-      engine_pile_.pop();
-
-      bool result = frame->fut.get();
-
-      if (result) {
-        post(result, frame->scratch->id, report);
-      }
-      frame->scratch = std::shared_ptr<Base::Listener::ScratchBuf>(new Base::Listener::ScratchBuf());
-      engine_pool_.push(frame);
+    if (interpreter_->AllocateTensors() != kTfLiteOk) {
+      dbgMsg("allocatetensors failed\n");
     }
+
+    TfLiteIntArray* dims = interpreter_->tensor(input)->dims;
+    int wanted_height = dims->data[1];
+    int wanted_width = dims->data[2];
+    int wanted_channels = dims->data[3];
+
+//    dbgMsg("wanted dims:  w:%d, h:%d, chn:%d\n", wanted_width, wanted_height,
+//        wanted_channels);
+
+    switch (interpreter_->tensor(input)->type) {
+      case kTfLiteFloat32:
+//        dbgMsg("float output\n");
+        resize<float>(interpreter_->typed_tensor<float>(input),
+            scratch_->buf.data(), height_, width_, channels_,
+            wanted_height, wanted_width, wanted_channels, true, 127.5f, 127.5f);
+        break;
+      case kTfLiteUInt8:
+//        dbgMsg("uint8 output\n");
+        resize<uint8_t>(interpreter_->typed_tensor<uint8_t>(input),
+            scratch_->buf.data(), height_, width_, channels_,
+            wanted_height, wanted_width, wanted_channels, false, 0, 0);
+        break;
+      default:
+        dbgMsg("unrecognized output\n");
+        break;
+    }
+    differ_image_.end();
+
+#if 0
+    if (counter != 0) {
+      counter--;
+      if (counter == 0) {
+        FILE* fd = fopen("resize.out", "wb");
+        if (fd == nullptr) {
+          dbgMsg("failed: open resize frame file\n");
+        }
+        
+        dbgMsg("***writing resized picture\n");
+        fwrite(interpreter_->typed_tensor<uint8_t>(input), 1, 
+            wanted_height * wanted_width * wanted_channels, fd);
+        fclose(fd);
+      }
+    }
+#endif
+
+    differ_eval_.begin();
+    interpreter_->Invoke();
+    differ_eval_.end();
+
+    scratch_ = std::shared_ptr<Base::Listener::ScratchBuf>(new Base::Listener::ScratchBuf());
+    tflow_empty_ = true;
   }
 
   return true;
 }
+
 bool Tflow::running() {
 
   if (tflow_on_) {
@@ -261,31 +218,20 @@ bool Tflow::waitingToHalt() {
     tflow_on_ = false;
 
     // finish processing
-    while (engine_work_.size() || engine_pile_.size()) {
+    while (!tflow_empty_) {
       oneRun(false);
     }
 
     // report
     if (!quiet_) {
       fprintf(stderr, "\n\nTflow Results...\n");
-      std::vector<std::shared_ptr<Tflow::Frame>> vec;
-      while (engine_pool_.size()) {
-        auto frame = engine_pool_.front();
-        engine_pool_.pop();
-        vec.push_back(frame);
-      }
-      std::sort(vec.begin(), vec.end(), 
-          [](const std::shared_ptr<Tflow::Frame> & a, 
-            const std::shared_ptr<Tflow::Frame> & b) -> bool { return a->name < b->name; });
-      for (auto& frame : vec) {
-        fprintf(stderr, "  buffer %c image prep time (us): high:%u avg:%u low:%u frames:%d\n", 
-            frame->name, frame->differ_image.getHigh_usec(), frame->differ_image.getAvg_usec(), 
-            frame->differ_image.getLow_usec(), frame->differ_image.getCnt());
-        fprintf(stderr, "  buffer %c image eval time (us): high:%u avg:%u low:%u frames:%d\n", 
-            frame->name, frame->differ_eval.getHigh_usec(), frame->differ_eval.getAvg_usec(), 
-            frame->differ_eval.getLow_usec(), frame->differ_eval.getCnt());
-        fprintf(stderr, "\n");
-      }
+      fprintf(stderr, "  image prep time (us): high:%u avg:%u low:%u frames:%d\n", 
+          differ_image_.getHigh_usec(), differ_image_.getAvg_usec(), 
+          differ_image_.getLow_usec(), differ_image_.getCnt());
+      fprintf(stderr, "  image eval time (us): high:%u avg:%u low:%u frames:%d\n", 
+          differ_eval_.getHigh_usec(), differ_eval_.getAvg_usec(), 
+          differ_eval_.getLow_usec(), differ_eval_.getCnt());
+      fprintf(stderr, "\n");
     }
   }
   return true;

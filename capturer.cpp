@@ -380,9 +380,11 @@ bool Capturer::running() {
       if (it != scratchbuf_.end()) {
         auto frm = *it;
 
+        differ_cpy_.begin();
         frm->id = frame_pool_[buf.index].id;
         std::memcpy(frm->buf.data(), frame_pool_[buf.index].addr, 
             frame_pool_[buf.index].length);
+        differ_cpy_.end();
 
 #ifdef CAPTURE_ONE_RAW_FRAME
         // write frames
@@ -393,16 +395,20 @@ bool Capturer::running() {
 #endif
         // send frame to tflow
         if (tfl_) {
+          differ_tfl_.begin();
           if (!tfl_->addMessage(Base::Listener::Message::kScratchBuf, &frm)) {
 //            dbgMsg("warning: tflow is busy\n");
           }
+          differ_tfl_.end();
         }
 
         // send frame to encoder
         if (enc_) {
+          differ_enc_.begin();
           if (!enc_->addMessage(Base::Listener::Message::kScratchBuf, &frm)) {
 //            dbgMsg("warning: encoder is busy\n");
           }
+          differ_enc_.end();
         }
 
       }
@@ -464,6 +470,15 @@ bool Capturer::waitingToHalt() {
     if (!quiet_) {
       fprintf(stderr, "\n\nCapturer Results...\n");
       fprintf(stderr, "  number of frames captured: %d\n", frame_cnt_); 
+      fprintf(stderr, "  image copy time (us): high:%u avg:%u low:%u frames:%d\n", 
+          differ_cpy_.getHigh_usec(), differ_cpy_.getAvg_usec(), 
+          differ_cpy_.getLow_usec(),  differ_cpy_.getCnt());
+      fprintf(stderr, "  tflow copy time (us): high:%u avg:%u low:%u frames:%d\n", 
+          differ_tfl_.getHigh_usec(), differ_tfl_.getAvg_usec(), 
+          differ_tfl_.getLow_usec(),  differ_tfl_.getCnt());
+      fprintf(stderr, "  enc   copy time (us): high:%u avg:%u low:%u frames:%d\n", 
+          differ_enc_.getHigh_usec(), differ_enc_.getAvg_usec(), 
+          differ_enc_.getLow_usec(),  differ_enc_.getCnt());
     }
   }
 

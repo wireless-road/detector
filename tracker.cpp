@@ -147,8 +147,8 @@ int main(int argc, char** argv) {
   }
   enc = Encoder::create(yield_time, quiet, rtsp.get(), framerate, 
       std::abs(wdth), std::abs(hght), bitrate, output, testtime);
-  tfl = Tflow::create(50*yield_time, quiet, enc.get(), std::abs(wdth), std::abs(hght), 
-    "./models/detect.tflite", 1, 1);
+  tfl = Tflow::create(10*yield_time, quiet, enc.get(), std::abs(wdth), std::abs(hght), 
+    "./models/detect.tflite", 3);
   cap = Capturer::create(yield_time, quiet, enc.get(), tfl.get(), 
       device, framerate, wdth, hght);
 

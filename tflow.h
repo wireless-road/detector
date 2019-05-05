@@ -116,7 +116,7 @@ class Tflow : public Base, Base::Listener {
   public:
     static std::unique_ptr<Tflow> create(unsigned int yield_time, bool quiet, 
         Encoder* enc, unsigned int width, unsigned int height, const char* filename,
-        unsigned int threads, unsigned int engines);
+        unsigned int threads);
     virtual ~Tflow();
 
   public:
@@ -126,8 +126,7 @@ class Tflow : public Base, Base::Listener {
     Tflow() = delete;
     Tflow(unsigned int yield_time);
     bool init(bool quiet, Encoder* enc, unsigned int width, 
-        unsigned int height, const char* filename, unsigned int threads,
-        unsigned int engines);
+        unsigned int height, const char* filename, unsigned int threads);
 
   protected:
     virtual bool waitingToRun();
@@ -141,47 +140,25 @@ class Tflow : public Base, Base::Listener {
     unsigned int width_;
     unsigned int height_;
     const unsigned int channels_ = {3};
+    unsigned int frame_len_;
 
     std::string model_fname_;
     unsigned int model_threads_;
 
-    class Frame {
-      public:
-        Frame() = delete;
-        Frame(char c, 
-            std::unique_ptr<tflite::FlatBufferModel>& m,
-            std::unique_ptr<tflite::Interpreter>& i) 
-          : name(c), model(std::move(m)), interpreter(std::move(i)),
-            differ_image(), differ_eval(), 
-            fut() {}
-        ~Frame() {}
-      public:
-        char name;
-        std::unique_ptr<tflite::FlatBufferModel> model;
-        std::unique_ptr<tflite::Interpreter> interpreter;
-        std::shared_ptr<Base::Listener::ScratchBuf> scratch;
-        Differ differ_image;
-        Differ differ_eval;
-        std::future<bool> fut;
-    };
-    std::timed_mutex engine_lock_;
-    unsigned int engine_num_;
-    unsigned int frame_len_;
-    std::queue<std::shared_ptr<Tflow::Frame>> engine_pool_;
-    std::queue<std::shared_ptr<Tflow::Frame>> engine_work_;
-    std::queue<std::shared_ptr<Tflow::Frame>> engine_pile_;
+    std::unique_ptr<tflite::FlatBufferModel> model_;
+    std::unique_ptr<tflite::Interpreter> interpreter_;
+    std::shared_ptr<Base::Listener::ScratchBuf> scratch_;
+    Differ differ_image_;
+    Differ differ_eval_;
 
     unsigned int post_id_ = {0};
-    const unsigned int eval_timeout_ = {1000};
-    bool eval(Tflow::Frame* frame);
-    static bool eval0(Tflow* self, Tflow::Frame* frame);
     Base::Listener::BoxBuf::Type targetType(const char* label);
     bool post(bool result, unsigned int id, bool report);
     bool oneRun(bool report);
 
+    std::timed_mutex tflow_lock_;
     std::atomic<bool> tflow_on_;
-
-    Differ differ_copy_;
+    std::atomic<bool> tflow_empty_;
 };
 
 } // namespace tracker

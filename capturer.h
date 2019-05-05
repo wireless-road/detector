@@ -92,6 +92,10 @@ class Capturer : public Base {
 
     int xioctl(int fd, int request, void* arg);
 
+    Differ differ_cpy_;
+    Differ differ_enc_;
+    Differ differ_tfl_;
+
 #ifdef CAPTURE_ONE_RAW_FRAME
     const unsigned int capture_cnt_ = {10};
     FILE* fd_raw_;
