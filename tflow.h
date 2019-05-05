@@ -142,8 +142,12 @@ class Tflow : public Base, Base::Listener {
     const unsigned int channels_ = {3};
 
     std::string model_fname_;
-    std::string labels_fname_;
     unsigned int model_threads_;
+
+    std::string labels_fname_;
+    std::vector<std::pair<unsigned int,Base::Listener::BoxBuf::Type>> labels_;
+    bool addLabel(std::vector<std::pair<unsigned int,Base::Listener::BoxBuf::Type>>& labels,
+      std::vector<std::string>& labs, const char* label, Base::Listener::BoxBuf::Type type);
 
     class Frame {
       public:
@@ -163,10 +167,11 @@ class Tflow : public Base, Base::Listener {
     Differ differ_copy_;
     Differ differ_prep_;
     Differ differ_eval_;
+    Differ differ_post_;
 
     unsigned int post_id_ = {0};
-    Base::Listener::BoxBuf::Type targetType(const char* label);
-    bool post(bool result, unsigned int id, bool report);
+    const unsigned int result_num_ = {10};
+    const char* boxBufTypeStr(Base::Listener::BoxBuf::Type t);
     bool oneRun(bool report);
 
     std::timed_mutex tflow_lock_;

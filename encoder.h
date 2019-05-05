@@ -94,6 +94,7 @@ class Encoder : public Base, Base::Listener {
     const Encoder::RGB red_rgb_   = {255,   0,   0};
     const Encoder::RGB green_rgb_ = {  0, 255,   0};
     const Encoder::RGB blue_rgb_  = {  0,   0, 255};
+    const Encoder::RGB gray_rgb_  = {128, 128, 128};
 
     FILE* fd_enc_;
 

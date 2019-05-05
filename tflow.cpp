@@ -19,6 +19,8 @@
 #include <chrono>
 #include <cstring>
 #include <algorithm>
+#include <iostream>
+#include <fstream>
 
 #include "tflow.h"
 
@@ -94,17 +96,59 @@ bool Tflow::addMessage(Base::Listener::Message msg, void* data) {
   return true;
 }
 
+bool Tflow::addLabel(std::vector<std::pair<unsigned int,Base::Listener::BoxBuf::Type>>& labels,
+    std::vector<std::string>& strs, const char* label, Base::Listener::BoxBuf::Type type) {
+
+  auto it = std::find_if(strs.begin(), strs.end(), 
+      [&](const std::string& str) 
+      { return str.compare(label) == 0; });
+
+  if (it != strs.end()) {
+    labels.emplace_back(
+        std::pair<unsigned int,Base::Listener::BoxBuf::Type>(it - strs.begin() + 1, type));
+  }
+  return true;
+}
+
 bool Tflow::waitingToRun() {
 
   if (!tflow_on_) {
 
+    // make model and interpreter
+    dbgMsg("make model and interpreter\n");
     model_ = tflite::FlatBufferModel::BuildFromFile(model_fname_.c_str());
     tflite::ops::builtin::BuiltinOpResolver resolver;
     tflite::InterpreterBuilder builder(*model_, resolver);
     builder(&interpreter_);
-
     interpreter_->UseNNAPI(false);
     interpreter_->SetNumThreads(model_threads_);
+
+    // read labels file
+    dbgMsg("read labels file\n");
+    std::ifstream ifs(labels_fname_.c_str(), std::ifstream::in);
+    if (!ifs) {
+      dbgMsg("could not open labels file\n");
+    }
+    std::vector<std::string> strs;
+    std::string line;
+    while (std::getline(ifs, line)) {
+      strs.emplace_back(line);
+    }
+    addLabel(labels_, strs, "person",     Base::Listener::BoxBuf::Type::kPerson);
+    addLabel(labels_, strs, "cat",        Base::Listener::BoxBuf::Type::kPet);
+    addLabel(labels_, strs, "dog",        Base::Listener::BoxBuf::Type::kPet);
+    addLabel(labels_, strs, "car",        Base::Listener::BoxBuf::Type::kVehicle);
+    addLabel(labels_, strs, "bus",        Base::Listener::BoxBuf::Type::kVehicle);
+    addLabel(labels_, strs, "truck",      Base::Listener::BoxBuf::Type::kVehicle);
+    addLabel(labels_, strs, "bicycle",    Base::Listener::BoxBuf::Type::kVehicle);
+    addLabel(labels_, strs, "motorcycle", Base::Listener::BoxBuf::Type::kVehicle);
+
+#ifdef DEBUG_MESSAGES
+    std::for_each(labels_.begin(), labels_.end(),
+        [&](const std::pair<unsigned int,Base::Listener::BoxBuf::Type>& pr) {
+          dbgMsg("label pair: %d = %d\n", pr.first, (int)pr.second);
+        });
+#endif
 
     tflow_on_ = true;
   }
@@ -112,29 +156,14 @@ bool Tflow::waitingToRun() {
   return true;
 }
 
-Base::Listener::BoxBuf::Type Tflow::targetType(const char* label)
-{
-  std::string str = label;
-  if (str.compare("person") == 0) {
-    return Base::Listener::BoxBuf::Type::kPerson;
-  } else if (str.compare("pet") == 0) {
-    return Base::Listener::BoxBuf::Type::kPet;
-  } else {
-    return Base::Listener::BoxBuf::Type::kVehicle;
+const char* Tflow::boxBufTypeStr(Base::Listener::BoxBuf::Type t) {
+  switch (t) {
+    case Base::Listener::BoxBuf::Type::kUnknown: return "unknown";
+    case Base::Listener::BoxBuf::Type::kPerson:  return "person";
+    case Base::Listener::BoxBuf::Type::kPet:     return "pet";
+    case Base::Listener::BoxBuf::Type::kVehicle: return "unknown";
   }
-}
-
-bool Tflow::post(bool result, unsigned int id, bool report) {
-
-  if (result) {
-
-    // todo:  find results
-    // todo:  make bounding boxes
-    // todo:  send boxes to encoder
-
-  }
-
-  return true;
+  return "unknown";
 }
 
 //unsigned int counter = 10;
@@ -142,6 +171,9 @@ bool Tflow::oneRun(bool report) {
   std::unique_lock<std::timed_mutex> lck(tflow_lock_);
 
   if (!tflow_empty_) {
+
+    // prepare image
+    //dbgMsg("prepare image\n");
     differ_prep_.begin();
     int input = interpreter_->inputs()[0];
     const std::vector<int> inputs = interpreter_->inputs();
@@ -194,10 +226,83 @@ bool Tflow::oneRun(bool report) {
     }
 #endif
 
+    // evaluate image
+    //dbgMsg("evaluate image\n");
     differ_eval_.begin();
     interpreter_->Invoke();
     differ_eval_.end();
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+    // post image
+    //dbgMsg("post image\n");
+    differ_post_.begin();
+    
+    auto boxes = std::shared_ptr<std::vector<Base::Listener::BoxBuf>>(
+          new std::vector<Base::Listener::BoxBuf>);
+
+    const std::vector<int>& res = interpreter_->outputs();
+    float* locs = interpreter_->tensor(res[0])->data.f;
+    float* clas = interpreter_->tensor(res[1])->data.f;
+    float* scor = interpreter_->tensor(res[2])->data.f;
+    for (unsigned int i = 0; i < result_num_; i++) {
+      unsigned int cls = static_cast<unsigned int>(clas[i]);
+      if (cls >= 1 && cls <= 91) {
+        if (scor[i] >= 0.f && scor[i] <= 1.f) {
+          float t = fmin(fmax(locs[i+0], 0.f), 1.f);
+          float l = fmin(fmax(locs[i+1], 0.f), 1.f);
+          float b = fmin(fmax(locs[i+2], 0.f), 1.f);
+          float r = fmin(fmax(locs[i+3], 0.f), 1.f);
+          if (t < b) {
+            if (l < r) {
+
+              auto it = std::find_if(labels_.begin(), labels_.end(),
+                  [&](const std::pair<unsigned int,Base::Listener::BoxBuf::Type>& pr) {
+                    return pr.first == cls;
+                  });
+
+#if DEBUG_MESSAGES
+              dbgMsg("%d: t:%f,l:%f,b:%f,r:%f, scor:%f, class:%d (boxbuf type:%d)\n",
+                  i, 
+                  locs[i], locs[i+1], locs[i+2], locs[i+3],
+                  scor[i], cls, 
+                  (it == labels_.end()) ? 
+                    (int)Base::Listener::BoxBuf::Type::kUnknown : (int)((*it).second));
+#else
+              if (report && !quiet) {
+                fprintf(stderr, "<%s>", boxBufTypeStr((*it).second));
+                fflush(stderr);
+              }
+#endif
+              unsigned int top  = t * height_;
+              unsigned int left = l * width_;
+              unsigned int bottom = b * width_;
+              unsigned int right  = r * height_;
+              unsigned int width  = right - left;
+              unsigned int height = bottom - top;
+
+              boxes->push_back(Base::Listener::BoxBuf(
+                  (*it).second,
+                  frame_.id, frame_.id,
+                  left, top, width, height));
+            }
+          }
+        }
+      }
+      locs += 4;
+      clas += 1;
+      scor += 1;
+    }
+
+    // send boxes if new
+    if (enc_) {
+      if (post_id_ <= frame_.id) {
+        if (!enc_->addMessage(Base::Listener::Message::kBoxBuf, &boxes)) {
+          dbgMsg("xnor target encoder busy\n");
+        }
+        post_id_ = frame_.id;
+      }
+    }
+    differ_post_.end();
 
     tflow_empty_ = true;
   }
@@ -232,13 +337,16 @@ bool Tflow::waitingToHalt() {
       fprintf(stderr, "\n\nTflow Results...\n");
       fprintf(stderr, "  image copy time (us): high:%u avg:%u low:%u frames:%d\n", 
           differ_copy_.getHigh_usec(), differ_copy_.getAvg_usec(), 
-          differ_copy_.getLow_usec(),differ_copy_.getCnt());
+          differ_copy_.getLow_usec(),  differ_copy_.getCnt());
       fprintf(stderr, "  image prep time (us): high:%u avg:%u low:%u frames:%d\n", 
           differ_prep_.getHigh_usec(), differ_prep_.getAvg_usec(), 
-          differ_prep_.getLow_usec(), differ_prep_.getCnt());
+          differ_prep_.getLow_usec(),  differ_prep_.getCnt());
       fprintf(stderr, "  image eval time (us): high:%u avg:%u low:%u frames:%d\n", 
           differ_eval_.getHigh_usec(), differ_eval_.getAvg_usec(), 
-          differ_eval_.getLow_usec(), differ_eval_.getCnt());
+          differ_eval_.getLow_usec(),  differ_eval_.getCnt());
+      fprintf(stderr, "  image post time (us): high:%u avg:%u low:%u frames:%d\n", 
+          differ_post_.getHigh_usec(), differ_post_.getAvg_usec(), 
+          differ_post_.getLow_usec(),  differ_post_.getCnt());
       fprintf(stderr, "\n");
     }
   }

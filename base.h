@@ -71,8 +71,8 @@ class Base {
         virtual ~Listener() {}
       public:
         enum class Message {
-          kFrameBuf,
-          kBoxBuf,  // sent as shared pointer to vector of BoxBuf
+          kFrameBuf = 0,
+          kBoxBuf,      // sent as shared pointer to vector of BoxBuf
           kNalBuf
         };  
         class FrameBuf {
@@ -87,6 +87,7 @@ class Base {
         class BoxBuf {
           public:
             enum class Type {
+              kUnknown = 0,
               kPerson,
               kPet,
               kVehicle

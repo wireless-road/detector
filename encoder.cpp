@@ -421,8 +421,10 @@ void Encoder::overlay(std::shared_ptr<Encoder::Frame> frame) {
               rgb = red_rgb_;
             } else if (box.type == Base::Listener::BoxBuf::Type::kPet) {
               rgb = green_rgb_;
-            } else {
+            } else if (box.type == Base::Listener::BoxBuf::Type::kVehicle) {
               rgb = blue_rgb_;
+            } else {
+              rgb = gray_rgb_;
             }
             drawRGBBox(thickness_, frame->buf.data(), 
                 width_, height_,
