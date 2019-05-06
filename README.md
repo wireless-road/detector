@@ -17,18 +17,18 @@ Tracker is cross compiled on a desktop and copied to the target rpi3b+.  As such
 process will require some environment variables so it can find the various pieces of 
 Tracker.  The following is how my environment is setup:
 ```
+# 'RASPBIAN' is my project directory
 export RASPBIAN=~/your/workspace/raspbian
+# 'RASPBIANCROSS' is the project cross-compiler
 export RASPBIANCROSS=$RASPBIAN/tools/arm-bcm2708/gcc-6-arm-linux-gnueabihf/armv6-rpi-linux-gnueabihf/bin/arm-linux-gnueabihf-
+# 'OMXSUPPORT' is the OMX libraries for encoding
 export OMXSUPPORT=$RASPBIAN/vc
+# 'LIVE555' is the location of the RTSP source
 export LIVE555=$RASPBIAN/live
+# 'TFLOWSDK' is the location of TensorFlow
 export TFLOWSDK=$RASPBIAN/tensorflow
 ```
 
-'RASPBIAN' is my project directory
-'RASPBIANCROSS' is the project cross-compiler
-'OMXSUPPORT' is the OMX libraries for encoding
-'LIVE555' is the location of the RTSP source
-'TFLOWSDK' is the location of TensorFlow
 
 ### Build Notes
 
