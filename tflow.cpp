@@ -280,7 +280,7 @@ const char* Tflow::boxBufTypeStr(Base::Listener::BoxBuf::Type t) {
     case Base::Listener::BoxBuf::Type::kUnknown: return "unknown";
     case Base::Listener::BoxBuf::Type::kPerson:  return "person";
     case Base::Listener::BoxBuf::Type::kPet:     return "pet";
-    case Base::Listener::BoxBuf::Type::kVehicle: return "unknown";
+    case Base::Listener::BoxBuf::Type::kVehicle: return "vehicle";
   }
   return "unknown";
 }
