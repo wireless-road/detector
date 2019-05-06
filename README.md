@@ -1,8 +1,8 @@
 # Tracker
 
 Tracker is a video pipeline application with target detection for 
-the [raspberry pi 3b+](https://www.raspberrypi.org/products/raspberry-pi-3-model-b-plus).  
-Targets are idenified in the output video with bounding boxes.  Target detection is 
+the [raspberry pi 3b+](https://www.raspberrypi.org/products/raspberry-pi-3-model-b-plus). Targets 
+are idenified in the output video with bounding boxes.  Target detection is 
 provided by [Tensorflow Lite](https://www.tensorflow.org/lite) running 
 the [COCO SSD MobileNet v1 model](http://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip).  The resulting
 video can be saved to an H264 elemental stream file or served up via RTSP.
