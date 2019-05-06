@@ -156,6 +156,125 @@ bool Tflow::waitingToRun() {
   return true;
 }
 
+bool Tflow::prep() {
+
+  differ_prep_.begin();
+  int input = interpreter_->inputs()[0];
+  const std::vector<int> inputs = interpreter_->inputs();
+  const std::vector<int> outputs = interpreter_->outputs();
+
+  if (interpreter_->AllocateTensors() != kTfLiteOk) {
+    dbgMsg("allocatetensors failed\n");
+    return false;
+  }
+
+  TfLiteIntArray* dims = interpreter_->tensor(input)->dims;
+  int wanted_height = dims->data[1];
+  int wanted_width = dims->data[2];
+  int wanted_channels = dims->data[3];
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  switch (interpreter_->tensor(input)->type) {
+    case kTfLiteFloat32:
+      resize<float>(interpreter_->typed_tensor<float>(input),
+          frame_.buf.data(), height_, width_, channels_,
+          wanted_height, wanted_width, wanted_channels, model_threads_,
+          true, 127.5f, 127.5f);
+      break;
+    case kTfLiteUInt8:
+      resize<uint8_t>(interpreter_->typed_tensor<uint8_t>(input),
+          frame_.buf.data(), height_, width_, channels_,
+          wanted_height, wanted_width, wanted_channels, model_threads_,
+          false, 0, 0);
+      break;
+    default:
+      dbgMsg("unrecognized output\n");
+      break;
+  }
+  differ_prep_.end();
+
+  return true;
+}
+
+bool Tflow::eval() {
+  differ_eval_.begin();
+  interpreter_->Invoke();
+  differ_eval_.end();
+  return true;
+}
+
+bool Tflow::post(bool report) {
+
+  differ_post_.begin();
+  
+  auto boxes = std::shared_ptr<std::vector<Base::Listener::BoxBuf>>(
+        new std::vector<Base::Listener::BoxBuf>);
+
+  const std::vector<int>& res = interpreter_->outputs();
+  float* locs = tflite::GetTensorData<float>(interpreter_->tensor(res[0]));
+  float* clas = tflite::GetTensorData<float>(interpreter_->tensor(res[1]));
+  float* scor = tflite::GetTensorData<float>(interpreter_->tensor(res[2]));
+  for (unsigned int i = 0; i < result_num_; i++) {
+    unsigned int cls = static_cast<unsigned int>(clas[i]);
+    if (cls >= 1 && cls <= 91) {
+      if (scor[i] >= 0.f && scor[i] <= 1.f) {
+        float t = fmin(fmax(locs[i+0], 0.f), 1.f);
+        float l = fmin(fmax(locs[i+1], 0.f), 1.f);
+        float b = fmin(fmax(locs[i+2], 0.f), 1.f);
+        float r = fmin(fmax(locs[i+3], 0.f), 1.f);
+        if (t < b) {
+          if (l < r) {
+
+            auto it = std::find_if(labels_.begin(), labels_.end(),
+                [&](const std::pair<unsigned int,Base::Listener::BoxBuf::Type>& pr) {
+                  return pr.first == cls;
+                });
+
+            auto btype = Base::Listener::BoxBuf::Type::kUnknown;
+            if (it != labels_.end()) {
+              btype = (*it).second;
+            }
+
+#if DEBUG_MESSAGES
+            dbgMsg("t:%f,l:%f,b:%f,r:%f, scor:%f, class:%d (boxbuf type:%s)\n",
+                t, l, b, r, scor[i], cls, boxBufTypeStr(btype));
+#else
+            if (report && !quiet_) {
+              fprintf(stderr, "<%s>", boxBufTypeStr(btype));
+              fflush(stderr);
+            }
+#endif
+            unsigned int top    = t * height_;
+            unsigned int bottom = b * height_;
+            unsigned int left   = l * width_;
+            unsigned int right  = r * width_;
+            unsigned int width  = right - left;
+            unsigned int height = bottom - top;
+            boxes->push_back(Base::Listener::BoxBuf(
+                btype, frame_.id, left, top, width, height));
+          }
+        }
+      }
+    }
+    locs += 4;
+    clas += 1;
+    scor += 1;
+  }
+
+  // send boxes if new
+  if (enc_) {
+    if (post_id_ <= frame_.id) {
+      if (!enc_->addMessage(Base::Listener::Message::kBoxBuf, &boxes)) {
+        dbgMsg("xnor target encoder busy\n");
+      }
+      post_id_ = frame_.id;
+    }
+  }
+  differ_post_.end();
+
+  return true;
+}
+
 const char* Tflow::boxBufTypeStr(Base::Listener::BoxBuf::Type t) {
   switch (t) {
     case Base::Listener::BoxBuf::Type::kUnknown: return "unknown";
@@ -173,40 +292,7 @@ bool Tflow::oneRun(bool report) {
   if (!tflow_empty_) {
 
     // prepare image
-    //dbgMsg("prepare image\n");
-    differ_prep_.begin();
-    int input = interpreter_->inputs()[0];
-    const std::vector<int> inputs = interpreter_->inputs();
-    const std::vector<int> outputs = interpreter_->outputs();
-
-    if (interpreter_->AllocateTensors() != kTfLiteOk) {
-      dbgMsg("allocatetensors failed\n");
-    }
-
-    TfLiteIntArray* dims = interpreter_->tensor(input)->dims;
-    int wanted_height = dims->data[1];
-    int wanted_width = dims->data[2];
-    int wanted_channels = dims->data[3];
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    switch (interpreter_->tensor(input)->type) {
-      case kTfLiteFloat32:
-        resize<float>(interpreter_->typed_tensor<float>(input),
-            frame_.buf.data(), height_, width_, channels_,
-            wanted_height, wanted_width, wanted_channels, model_threads_,
-            true, 127.5f, 127.5f);
-        break;
-      case kTfLiteUInt8:
-        resize<uint8_t>(interpreter_->typed_tensor<uint8_t>(input),
-            frame_.buf.data(), height_, width_, channels_,
-            wanted_height, wanted_width, wanted_channels, model_threads_,
-            false, 0, 0);
-        break;
-      default:
-        dbgMsg("unrecognized output\n");
-        break;
-    }
-    differ_prep_.end();
+    prep();
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 #if 0
@@ -227,83 +313,12 @@ bool Tflow::oneRun(bool report) {
 #endif
 
     // evaluate image
-    //dbgMsg("evaluate image\n");
-    differ_eval_.begin();
-    interpreter_->Invoke();
-    differ_eval_.end();
+    eval();
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     // post image
-    //dbgMsg("post image\n");
-    differ_post_.begin();
-    
-    auto boxes = std::shared_ptr<std::vector<Base::Listener::BoxBuf>>(
-          new std::vector<Base::Listener::BoxBuf>);
-
-    const std::vector<int>& res = interpreter_->outputs();
-    float* locs = tflite::GetTensorData<float>(interpreter_->tensor(res[0]));
-    float* clas = tflite::GetTensorData<float>(interpreter_->tensor(res[1]));
-    float* scor = tflite::GetTensorData<float>(interpreter_->tensor(res[2]));
-    for (unsigned int i = 0; i < result_num_; i++) {
-      unsigned int cls = static_cast<unsigned int>(clas[i]);
-      if (cls >= 1 && cls <= 91) {
-        if (scor[i] >= 0.f && scor[i] <= 1.f) {
-          float t = fmin(fmax(locs[i+0], 0.f), 1.f);
-          float l = fmin(fmax(locs[i+1], 0.f), 1.f);
-          float b = fmin(fmax(locs[i+2], 0.f), 1.f);
-          float r = fmin(fmax(locs[i+3], 0.f), 1.f);
-          if (t < b) {
-            if (l < r) {
-
-              auto it = std::find_if(labels_.begin(), labels_.end(),
-                  [&](const std::pair<unsigned int,Base::Listener::BoxBuf::Type>& pr) {
-                    return pr.first == cls;
-                  });
-
-              auto btype = Base::Listener::BoxBuf::Type::kUnknown;
-              if (it != labels_.end()) {
-                btype = (*it).second;
-              }
-
-#if DEBUG_MESSAGES
-              dbgMsg("t:%f,l:%f,b:%f,r:%f, scor:%f, class:%d (boxbuf type:%s)\n",
-                  t, l, b, r, scor[i], cls, boxBufTypeStr(btype));
-#else
-              if (report && !quiet) {
-                fprintf(stderr, "<%s>", boxBufTypeStr(btype));
-                fflush(stderr);
-              }
-#endif
-              unsigned int top    = t * height_;
-              unsigned int bottom = b * height_;
-
-              unsigned int left   = l * width_;
-              unsigned int right  = r * width_;
-
-              unsigned int width  = right - left;
-              unsigned int height = bottom - top;
-
-              boxes->push_back(Base::Listener::BoxBuf(
-                  btype, frame_.id, left, top, width, height));
-            }
-          }
-        }
-      }
-      locs += 4;
-      clas += 1;
-      scor += 1;
-    }
-
-    // send boxes if new
-    if (enc_) {
-      if (post_id_ <= frame_.id) {
-        if (!enc_->addMessage(Base::Listener::Message::kBoxBuf, &boxes)) {
-          dbgMsg("xnor target encoder busy\n");
-        }
-        post_id_ = frame_.id;
-      }
-    }
-    differ_post_.end();
+    post(report);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     tflow_empty_ = true;
   }

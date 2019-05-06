@@ -172,6 +172,9 @@ class Tflow : public Base, Base::Listener {
 
     unsigned int post_id_ = {0};
     const unsigned int result_num_ = {10};
+    bool prep();
+    bool eval();
+    bool post(bool report);
     const char* boxBufTypeStr(Base::Listener::BoxBuf::Type t);
     bool oneRun(bool report);
 
