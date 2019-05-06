@@ -274,10 +274,12 @@ bool Tflow::oneRun(bool report) {
                 fflush(stderr);
               }
 #endif
-              unsigned int top  = t * height_;
-              unsigned int left = l * width_;
-              unsigned int bottom = b * width_;
-              unsigned int right  = r * height_;
+              unsigned int top    = t * height_;
+              unsigned int bottom = b * height_;
+
+              unsigned int left   = l * width_;
+              unsigned int right  = r * width_;
+
               unsigned int width  = right - left;
               unsigned int height = bottom - top;
 

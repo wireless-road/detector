@@ -323,10 +323,70 @@ bool drawYUVBox(unsigned int thick,
   return true;
 }
 
-bool drawRGBBox(unsigned int thick, unsigned char* dst,
-    unsigned int width, unsigned int height,
+struct draw_rgb {
+  unsigned char r;
+  unsigned char g;
+  unsigned char b;
+};
+static void drawRGBHorizontalLine(unsigned int thick,
+    struct draw_rgb* start, unsigned int len, unsigned int stride,
+    unsigned char val_r, unsigned char val_g, unsigned char val_b) {
+
+  for (unsigned int t = 0; t < thick; t++) {
+    for (unsigned int l = 0; l < len; l++) {
+      struct draw_rgb* p = start + l;
+      p->r = val_r;
+      p->g = val_g;
+      p->b = val_b;
+    }
+    start += stride;
+  }
+}
+static void drawRGBVerticalLine(unsigned int thick,
+    struct draw_rgb* start, unsigned int len, unsigned int stride, 
+    unsigned char val_r, unsigned char val_g, unsigned char val_b) {
+  for (unsigned int l = 0; l < len; l++) {
+    for (unsigned int t = 0; t < thick; t++) {
+      struct draw_rgb* p = start + t;
+      p->r = val_r;
+      p->g = val_g;
+      p->b = val_b;
+    }
+    start += stride;
+  }
+}
+bool drawRGBBox(unsigned int thick, 
+    unsigned char* dst, unsigned int width, unsigned int height,
     unsigned int x, unsigned int y, unsigned int w, unsigned int h,
     unsigned char val_r, unsigned char val_g, unsigned char val_b) {
+
+//  dbgMsg("width: %d, height: %d\n", width, height);
+//  dbgMsg("x: %d, y: %d, w: %d, h: %d\n", x, y, w, h);
+//  dbgMsg("val_r: 0x%x, val_g: 0x%x, val_b: 0x%x\n", val_r, val_g, val_b);
+
+  if (!dst) {
+    return false;
+  }
+  if (width == 0 || height == 0) {
+    return true;
+  }
+
+  unsigned int size_rgb = sizeof(struct draw_rgb);
+  unsigned int stride_y   = width * size_rgb;
+  struct draw_rgb* start  = nullptr;
+
+  // draw horizontal lines
+  start = (struct draw_rgb*)(dst + (y * stride_y) + (x * size_rgb));
+  drawRGBHorizontalLine(thick, start, w, width, val_r, val_g, val_b);
+  start += (h - thick) * width;
+  drawRGBHorizontalLine(thick, start, w, width, val_r, val_g, val_b);
+
+  // draw vertical lines
+  start = (struct draw_rgb*)(dst + (y * stride_y) + (x * size_rgb));
+  drawRGBVerticalLine(thick, start, h, width, val_r, val_g, val_b);
+  start += (w - thick);
+  drawRGBVerticalLine(thick, start, h, width, val_r, val_g, val_b);
+
   return true;
 }
 
