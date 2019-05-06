@@ -238,8 +238,10 @@ bool Tflow::post(bool report) {
   float* locs = tflite::GetTensorData<float>(interpreter_->tensor(res[0]));
   float* clas = tflite::GetTensorData<float>(interpreter_->tensor(res[1]));
   float* scor = tflite::GetTensorData<float>(interpreter_->tensor(res[2]));
+#if DEBUG_MESSAGES
   float* tot  = tflite::GetTensorData<float>(interpreter_->tensor(res[3]));
   dbgMsg("total results: %d\n", static_cast<unsigned int>(tot[0]));
+#endif
   for (unsigned int i = 0; i < result_num_; i++, locs += 4) {
 
     unsigned int class_id = static_cast<unsigned int>(clas[i]);
