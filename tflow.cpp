@@ -105,7 +105,7 @@ bool Tflow::addLabel(std::vector<std::pair<unsigned int,Base::Listener::BoxBuf::
 
   if (it != strs.end()) {
     labels.emplace_back(
-        std::pair<unsigned int,Base::Listener::BoxBuf::Type>(it - strs.begin() + 1, type));
+        std::pair<unsigned int,Base::Listener::BoxBuf::Type>(it - strs.begin(), type));
   }
   return true;
 }
@@ -146,7 +146,7 @@ bool Tflow::waitingToRun() {
 #ifdef DEBUG_MESSAGES
     std::for_each(labels_.begin(), labels_.end(),
         [&](const std::pair<unsigned int,Base::Listener::BoxBuf::Type>& pr) {
-          dbgMsg("label pair: %d = %d\n", pr.first, (int)pr.second);
+          dbgMsg("label pair: %d = %s\n", pr.first, boxBufTypeStr(pr.second));
         });
 #endif
 
@@ -193,12 +193,36 @@ bool Tflow::prep() {
   }
   differ_prep_.end();
 
+#ifdef CAPTURE_ONE_RAW_FRAME
+    if (counter != 0) {
+      counter--;
+      if (counter == 0) {
+        char buf[100];
+        sprintf(buf, "./frm_%dx%d_resized.rgb24", wanted_width, wanted_height);
+        FILE* fd = fopen(buf, "wb");
+        if (fd == nullptr) {
+          dbgMsg("failed: open resize frame file\n");
+        }
+#ifdef OUTPUT_VARIOUS_BITS_OF_INFO
+        dbgMsg("  writing resized - fmt:rgb24 len:%d\n",
+            wanted_height * wanted_width * wanted_channels);
+#endif
+        fwrite(interpreter_->typed_tensor<uint8_t>(input), 1, 
+            wanted_height * wanted_width * wanted_channels, fd);
+        fclose(fd);
+      }
+    }
+#endif
+
+
   return true;
 }
 
 bool Tflow::eval() {
   differ_eval_.begin();
-  interpreter_->Invoke();
+  if (interpreter_->Invoke() != kTfLiteOk) {
+    dbgMsg("failed invoke\n");
+  }
   differ_eval_.end();
   return true;
 }
@@ -214,51 +238,56 @@ bool Tflow::post(bool report) {
   float* locs = tflite::GetTensorData<float>(interpreter_->tensor(res[0]));
   float* clas = tflite::GetTensorData<float>(interpreter_->tensor(res[1]));
   float* scor = tflite::GetTensorData<float>(interpreter_->tensor(res[2]));
-  for (unsigned int i = 0; i < result_num_; i++) {
-    unsigned int cls = static_cast<unsigned int>(clas[i]);
-    if (cls >= 1 && cls <= 91) {
-      if (scor[i] >= 0.f && scor[i] <= 1.f) {
-        float t = fmin(fmax(locs[i+0], 0.f), 1.f);
-        float l = fmin(fmax(locs[i+1], 0.f), 1.f);
-        float b = fmin(fmax(locs[i+2], 0.f), 1.f);
-        float r = fmin(fmax(locs[i+3], 0.f), 1.f);
-        if (t < b) {
-          if (l < r) {
+  float* tot  = tflite::GetTensorData<float>(interpreter_->tensor(res[3]));
+  dbgMsg("total results: %d\n", static_cast<unsigned int>(tot[0]));
+  for (unsigned int i = 0; i < result_num_; i++, locs += 4) {
+
+    unsigned int class_id = static_cast<unsigned int>(clas[i]);
+
+    if (class_id >= 1 && class_id <= 91) {
+      if (scor[i] >= threshold_ && scor[i] <= 1.f) {
+
+        // clamp
+        float top    = fmin(fmax(locs[0], 0.f), 1.f);
+        float left   = fmin(fmax(locs[1], 0.f), 1.f);
+        float bottom = fmin(fmax(locs[2], 0.f), 1.f);
+        float right  = fmin(fmax(locs[3], 0.f), 1.f);
+
+        if (top < bottom) {
+          if (left < right) {
 
             auto it = std::find_if(labels_.begin(), labels_.end(),
                 [&](const std::pair<unsigned int,Base::Listener::BoxBuf::Type>& pr) {
-                  return pr.first == cls;
+                  return pr.first == class_id;
                 });
 
-            auto btype = Base::Listener::BoxBuf::Type::kUnknown;
             if (it != labels_.end()) {
-              btype = (*it).second;
-            }
+              auto btype = (*it).second;
 
 #if DEBUG_MESSAGES
-            dbgMsg("t:%f,l:%f,b:%f,r:%f, scor:%f, class:%d (boxbuf type:%s)\n",
-                t, l, b, r, scor[i], cls, boxBufTypeStr(btype));
+              dbgMsg("t:%f,l:%f,b:%f,r:%f, scor:%f, class:%d (boxbuf type:%s)\n",
+                  top, left, bottom, right, scor[i], class_id, boxBufTypeStr(btype));
 #else
-            if (report && !quiet_) {
-              fprintf(stderr, "<%s>", boxBufTypeStr(btype));
-              fflush(stderr);
-            }
+              if (report && !quiet_) {
+                fprintf(stderr, "<%s>", boxBufTypeStr(btype));
+                fflush(stderr);
+              }
 #endif
-            unsigned int top    = t * height_;
-            unsigned int bottom = b * height_;
-            unsigned int left   = l * width_;
-            unsigned int right  = r * width_;
-            unsigned int width  = right - left;
-            unsigned int height = bottom - top;
-            boxes->push_back(Base::Listener::BoxBuf(
-                btype, frame_.id, left, top, width, height));
+              unsigned int top_uint    = top    * height_;
+              unsigned int bottom_uint = bottom * height_;
+              unsigned int left_uint   = left   * width_;
+              unsigned int right_uint  = right  * width_;
+
+              unsigned int width_uint  = right_uint  - left_uint;
+              unsigned int height_uint = bottom_uint - top_uint;
+
+              boxes->push_back(Base::Listener::BoxBuf(
+                  btype, frame_.id, left_uint, top_uint, width_uint, height_uint));
+            }
           }
         }
       }
     }
-    locs += 4;
-    clas += 1;
-    scor += 1;
   }
 
   // send boxes if new
@@ -285,7 +314,6 @@ const char* Tflow::boxBufTypeStr(Base::Listener::BoxBuf::Type t) {
   return "unknown";
 }
 
-//unsigned int counter = 10;
 bool Tflow::oneRun(bool report) {
   std::unique_lock<std::timed_mutex> lck(tflow_lock_);
 
@@ -294,23 +322,6 @@ bool Tflow::oneRun(bool report) {
     // prepare image
     prep();
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-#if 0
-    if (counter != 0) {
-      counter--;
-      if (counter == 0) {
-        FILE* fd = fopen("resize.out", "wb");
-        if (fd == nullptr) {
-          dbgMsg("failed: open resize frame file\n");
-        }
-        
-        dbgMsg("***writing resized picture\n");
-        fwrite(interpreter_->typed_tensor<uint8_t>(input), 1, 
-            wanted_height * wanted_width * wanted_channels, fd);
-        fclose(fd);
-      }
-    }
-#endif
 
     // evaluate image
     eval();

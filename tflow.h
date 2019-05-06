@@ -40,10 +40,10 @@
 namespace tracker {
 
 template <class T>
-void resize(T* out, uint8_t* in, int image_height, int image_width,
-            int image_channels, int wanted_height, int wanted_width,
-            int wanted_channels, int threads, bool is_float, 
-            float input_mean, float input_std) {
+void resize(T* out, uint8_t* in, 
+    int image_height, int image_width, int image_channels, 
+    int wanted_height, int wanted_width, int wanted_channels, 
+    int threads, bool is_float, float input_mean, float input_std) {
 
   int number_of_pixels = image_height * image_width * image_channels;
   std::unique_ptr<tflite::Interpreter> interpreter(new tflite::Interpreter);
@@ -141,6 +141,7 @@ class Tflow : public Base, Base::Listener {
     unsigned int width_;
     unsigned int height_;
     const unsigned int channels_ = {3};
+    const float threshold_ = {0.1f};
 
     std::string model_fname_;
     unsigned int model_threads_;
@@ -181,6 +182,10 @@ class Tflow : public Base, Base::Listener {
     std::timed_mutex tflow_lock_;
     std::atomic<bool> tflow_on_;
     std::atomic<bool> tflow_empty_;
+
+#ifdef CAPTURE_ONE_RAW_FRAME
+    unsigned int counter = {10};
+#endif
 };
 
 } // namespace tracker
