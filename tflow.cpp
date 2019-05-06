@@ -246,7 +246,7 @@ bool Tflow::post(bool report) {
 
     unsigned int class_id = static_cast<unsigned int>(clas[i]);
 
-    if (class_id >= 1 && class_id <= 91) {
+    if (class_id >= 0 && class_id <= class_id_max_) {
       if (scor[i] >= threshold_ && scor[i] <= 1.f) {
 
         // clamp

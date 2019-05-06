@@ -142,6 +142,7 @@ class Tflow : public Base, Base::Listener {
     unsigned int height_;
     const unsigned int channels_ = {3};
     const float threshold_ = {0.1f};
+    unsigned int class_id_max_ = {90};
 
     std::string model_fname_;
     unsigned int model_threads_;
