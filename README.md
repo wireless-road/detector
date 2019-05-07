@@ -135,9 +135,73 @@ version: 0.5
                = no output if testtime is 0
 ```
 
+A typical example command would be:
+```
+./tracker -t 10 -w -640 -h -480 -e 4 output.h264
+```
+
+This command will capture a 640x480 video for 10 seconds and write the H264 elemental stream
+to 'output.h264'.  The TensorFlow Lite target detection engine will use 4 threads.  The output 
+will look like this:
+
+```
+./tracker -t 10 -w -640 -h -480 -e 4 output.h264
+
+Test Setup...
+   test time: 10 seconds
+      device: /dev/video0
+        rtsp: no
+   framerate: 20 fps
+       width: 640 pix (flipped)
+      height: 480 pix (flipped)
+     bitrate: 1000000 bps
+  yield time: 1000 usec
+     threads: 4
+       model: ./models/detect.tflite
+      lables: ./models/labelmap.txt
+      output: output.h264
+
+         pid: top -H -p 1631
+
+
+
+..................................................
+
+
+
+Capturer Results...
+  number of frames captured: 221
+  tflow copy time (us): high:1619 avg:1018 low:10 frames:221
+  enc   copy time (us): high:1881 avg:926 low:703 frames:221
+
+
+Tflow Results...
+  image copy time (us): high:1173 avg:805 low:731 frames:31
+  image prep time (us): high:104681 avg:75502 low:74352 frames:31
+  image eval time (us): high:187288 avg:181220 low:178626 frames:31
+  image post time (us): high:96 avg:47 low:37 frames:31
+
+
+Encoder Results...
+  image copy   time (us): high:1566 avg:908 low:697 frames:221
+  image encode time (us): high:43862 avg:7901 low:3159 frames:221
+
+```
+This tells us the test setup and results.  While the test is working it will 
+display a series of '.'.  The output tells us that 221 frames were captured.  That
+they were copied to the tensorflow and encoder worker threads for an averable of about
+1ms each.  The tensorflow thread took, on average ~75ms to scale the input image and
+~181ms to run an inference.  They encoder, on average, took about 7.9ms to encode an 
+image.
+
+Of special interest, you can run the 'top -H -p 1631' command in a separate terminal window
+on your rpi3b+ to see what threads are created and how much of the CPU they are 
+consuming.  The program prints out this command for each run for convenience.
 
 
 ### Discussion
+
+todo
 
 ### To Do
 
