@@ -124,6 +124,8 @@ bool Rtsp::addMessage(Base::Listener::Message msg, void* data) {
 
   nal_work_.push_back(rtsp_nal);
 
+// moved to rtsp::running loop
+//  env_->taskScheduler().triggerEvent(live_src_->evt_id_, live_src_);
   return true;
 }
 
