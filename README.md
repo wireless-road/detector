@@ -214,6 +214,9 @@ capturer thread, scales the images for the target model and then runs an inferen
 target 'boxes' which are sent to the encoder as an overlay for the image before it is encoded.
 - rtsp.{h,cpp}:  Live555 RTSP server implementation.  
 
+All the significate threads in the program are derived from a base state machine (base.{h,cpp}).  See
+the comment at the top of base.h for more details.
+
 ### To Do
 
 - Get RTSP to work faster than 20fps
