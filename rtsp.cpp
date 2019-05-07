@@ -70,16 +70,18 @@ Rtsp::~Rtsp() {
 }
 
 std::unique_ptr<Rtsp> Rtsp::create(unsigned int yield_time, bool quiet, 
-    unsigned int bitrate, std::string& unicast) {
+    unsigned int bitrate, unsigned int framerate, std::string& unicast) {
   auto obj = std::unique_ptr<Rtsp>(new Rtsp(yield_time));
-  obj->init(quiet, bitrate, unicast);
+  obj->init(quiet, bitrate, framerate, unicast);
   return obj;
 }
 
-bool Rtsp::init(bool quiet, unsigned int bitrate, std::string& unicast) {
+bool Rtsp::init(bool quiet, unsigned int bitrate, unsigned int framerate, 
+    std::string& unicast) {
 
   quiet_ = quiet;
   bitrate_ = bitrate;
+  framerate_ = framerate;
   unicast_ = unicast;
   rtsp_on_ = false;
 
@@ -93,38 +95,34 @@ bool Rtsp::addMessage(Base::Listener::Message msg, void* data) {
     return false;
   }
 
-  {
-    std::unique_lock<std::timed_mutex> lck(nal_lock_, std::defer_lock);
+  std::unique_lock<std::timed_mutex> lck(nal_lock_, std::defer_lock);
 
-    if (!lck.try_lock_for(std::chrono::microseconds(Base::Listener::timeout_))) {
-      dbgMsg("rtsp nal lock busy\n");
-      return false;
-    }
-
-    // drop a queued frame if the pool is empty
-    std::shared_ptr<Rtsp::RtspNal> rtsp_nal;
-    if (nal_pool_.size() == 0) {
-      dbgMsg("dropping back.  queue size: %d\n", nal_work_.size());
-      rtsp_nal = nal_work_.back();
-      nal_work_.pop_back();
-    } else {
-      rtsp_nal = nal_pool_.front();
-      nal_pool_.pop_front();
-    }
-
-    auto nal = static_cast<Base::Listener::NalBuf*>(data);
-
-    if (nal->length > rtsp_nal->nal.size()) {
-      dbgMsg("--------------------------resize nal: sz=%d\n", nal->length);
-      rtsp_nal->nal.resize(nal->length, 0);
-    }
-    std::memcpy(rtsp_nal->nal.data(), nal->addr, nal->length);
-    rtsp_nal->length = nal->length;
-
-    nal_work_.push_back(rtsp_nal);
+  if (!lck.try_lock_for(std::chrono::microseconds(Base::Listener::timeout_))) {
+    dbgMsg("rtsp nal lock busy\n");
+    return false;
   }
 
-  env_->taskScheduler().triggerEvent(live_src_->evt_id_, live_src_);
+  // drop a queued frame if the pool is empty
+  std::shared_ptr<Rtsp::RtspNal> rtsp_nal;
+  if (nal_pool_.size() == 0) {
+    dbgMsg("dropping back.  queue size: %d\n", nal_work_.size());
+    rtsp_nal = nal_work_.back();
+    nal_work_.pop_back();
+  } else {
+    rtsp_nal = nal_pool_.front();
+    nal_pool_.pop_front();
+  }
+
+  auto nal = static_cast<Base::Listener::NalBuf*>(data);
+
+  if (nal->length > rtsp_nal->nal.size()) {
+    dbgMsg("--------------------------resize nal: sz=%d\n", nal->length);
+    rtsp_nal->nal.resize(nal->length, 0);
+  }
+  std::memcpy(rtsp_nal->nal.data(), nal->addr, nal->length);
+  rtsp_nal->length = nal->length;
+
+  nal_work_.push_back(rtsp_nal);
 
   return true;
 }
@@ -164,6 +162,7 @@ bool Rtsp::deliverFrame(unsigned int& max_size, unsigned int& frame_size,
     }
     gettimeofday(&pts, NULL);
     duration = 0;
+//    duration = 1000000 / framerate_;
     memcpy(to, rtsp_nal->nal.data(), frame_size);
     nal_pool_.push_back(rtsp_nal);
     return true;
@@ -307,6 +306,12 @@ void Rtsp::afterPlay(void* data) {
 
 bool Rtsp::running() {
   if (rtsp_on_) {
+    std::unique_lock<std::timed_mutex> lck(nal_lock_, std::defer_lock);
+    if (lck.try_lock_for(std::chrono::microseconds(Base::Listener::timeout_))) {
+      if (nal_work_.size() != 0) {
+        env_->taskScheduler().triggerEvent(live_src_->evt_id_, live_src_);
+      }
+    }
   }
   return true;
 }

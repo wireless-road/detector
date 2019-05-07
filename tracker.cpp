@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
 
   // create worker threads
   if (streaming) { 
-    rtsp = Rtsp::create(yield_time, quiet, bitrate, unicast); 
+    rtsp = Rtsp::create(yield_time, quiet, bitrate, framerate, unicast); 
   }
   enc = Encoder::create(yield_time, quiet, rtsp.get(), framerate, 
       std::abs(wdth), std::abs(hght), bitrate, output, testtime);

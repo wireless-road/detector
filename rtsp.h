@@ -64,7 +64,7 @@ class LiveSource : public FramedSource {
 class Rtsp : public Base, Base::Listener {
   public:
     static std::unique_ptr<Rtsp> create(unsigned int yield_time, bool quiet, 
-        unsigned int bitrate, std::string& unicast);
+        unsigned int bitrate, unsigned int framerate, std::string& unicast);
     virtual ~Rtsp();
 
   public:
@@ -73,7 +73,8 @@ class Rtsp : public Base, Base::Listener {
   protected:
     Rtsp() = delete;
     Rtsp(unsigned int yield_time);
-    bool init(bool quiet, unsigned int bitrate, std::string& unicast);
+    bool init(bool quiet, unsigned int bitrate, unsigned int framerate, 
+        std::string& unicast);
 
   protected:
     virtual bool waitingToRun();
@@ -96,6 +97,7 @@ class Rtsp : public Base, Base::Listener {
   private:
     bool quiet_;
     unsigned int bitrate_;
+    unsigned int framerate_;
     std::string unicast_;
     UsageEnvironment* env_;
     const unsigned output_max_ = {3 * 1024 * 1024};
