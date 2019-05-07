@@ -36,15 +36,15 @@ Tflow::~Tflow() {
 
 std::unique_ptr<Tflow> Tflow::create(unsigned int yield_time, bool quiet, 
     Encoder* enc, unsigned int width, unsigned int height, 
-    const char* model, const char* labels, unsigned int threads) {
+    const char* model, const char* labels, unsigned int threads, float threshold) {
   auto obj = std::unique_ptr<Tflow>(new Tflow(yield_time));
-  obj->init(quiet, enc, width, height, model, labels, threads);
+  obj->init(quiet, enc, width, height, model, labels, threads, threshold);
   return obj;
 }
 
 bool Tflow::init(bool quiet, Encoder* enc, unsigned int width, 
     unsigned int height, const char* model, const char* labels, 
-    unsigned int threads) {
+    unsigned int threads, float threshold) {
 
   quiet_ = quiet;
 
@@ -59,6 +59,7 @@ bool Tflow::init(bool quiet, Encoder* enc, unsigned int width,
   model_fname_ = model;
   labels_fname_ = labels;
   model_threads_ = threads;
+  threshold_ = threshold;
 
   tflow_on_ = false;
 
@@ -96,16 +97,15 @@ bool Tflow::addMessage(Base::Listener::Message msg, void* data) {
   return true;
 }
 
-bool Tflow::addLabel(std::vector<std::pair<unsigned int,Base::Listener::BoxBuf::Type>>& labels,
-    std::vector<std::string>& strs, const char* label, Base::Listener::BoxBuf::Type type) {
+bool Tflow::addLabel(const char* label, Base::Listener::BoxBuf::Type type) {
 
-  auto it = std::find_if(strs.begin(), strs.end(), 
+  auto it = std::find_if(labels_.begin(), labels_.end(), 
       [&](const std::string& str) 
       { return str.compare(label) == 0; });
 
-  if (it != strs.end()) {
-    labels.emplace_back(
-        std::pair<unsigned int,Base::Listener::BoxBuf::Type>(it - strs.begin(), type));
+  if (it != labels_.end()) {
+    labels_pairs_.emplace_back(
+        std::pair<unsigned int,Base::Listener::BoxBuf::Type>(it - labels_.begin(), type));
   }
   return true;
 }
@@ -129,22 +129,23 @@ bool Tflow::waitingToRun() {
     if (!ifs) {
       dbgMsg("could not open labels file\n");
     }
-    std::vector<std::string> strs;
     std::string line;
     while (std::getline(ifs, line)) {
-      strs.emplace_back(line);
+      if (line.compare("???") != 0) {
+        labels_.emplace_back(line);
+      }
     }
-    addLabel(labels_, strs, "person",     Base::Listener::BoxBuf::Type::kPerson);
-    addLabel(labels_, strs, "cat",        Base::Listener::BoxBuf::Type::kPet);
-    addLabel(labels_, strs, "dog",        Base::Listener::BoxBuf::Type::kPet);
-    addLabel(labels_, strs, "car",        Base::Listener::BoxBuf::Type::kVehicle);
-    addLabel(labels_, strs, "bus",        Base::Listener::BoxBuf::Type::kVehicle);
-    addLabel(labels_, strs, "truck",      Base::Listener::BoxBuf::Type::kVehicle);
-    addLabel(labels_, strs, "bicycle",    Base::Listener::BoxBuf::Type::kVehicle);
-    addLabel(labels_, strs, "motorcycle", Base::Listener::BoxBuf::Type::kVehicle);
+    addLabel("person",     Base::Listener::BoxBuf::Type::kPerson);
+    addLabel("cat",        Base::Listener::BoxBuf::Type::kPet);
+    addLabel("dog",        Base::Listener::BoxBuf::Type::kPet);
+    addLabel("car",        Base::Listener::BoxBuf::Type::kVehicle);
+    addLabel("bus",        Base::Listener::BoxBuf::Type::kVehicle);
+    addLabel("truck",      Base::Listener::BoxBuf::Type::kVehicle);
+    addLabel("bicycle",    Base::Listener::BoxBuf::Type::kVehicle);
+    addLabel("motorcycle", Base::Listener::BoxBuf::Type::kVehicle);
 
 #ifdef DEBUG_MESSAGES
-    std::for_each(labels_.begin(), labels_.end(),
+    std::for_each(labels_pairs_.begin(), labels_pairs_.end(),
         [&](const std::pair<unsigned int,Base::Listener::BoxBuf::Type>& pr) {
           dbgMsg("label pair: %d = %s\n", pr.first, boxBufTypeStr(pr.second));
         });
@@ -214,7 +215,6 @@ bool Tflow::prep() {
     }
 #endif
 
-
   return true;
 }
 
@@ -246,7 +246,7 @@ bool Tflow::post(bool report) {
 
     unsigned int class_id = static_cast<unsigned int>(clas[i]);
 
-    if (class_id >= 0 && class_id <= class_id_max_) {
+    if (class_id < labels_.size()) {
       if (scor[i] >= threshold_ && scor[i] <= 1.f) {
 
         // clamp
@@ -258,34 +258,35 @@ bool Tflow::post(bool report) {
         if (top < bottom) {
           if (left < right) {
 
-            auto it = std::find_if(labels_.begin(), labels_.end(),
+            auto it = std::find_if(labels_pairs_.begin(), labels_pairs_.end(),
                 [&](const std::pair<unsigned int,Base::Listener::BoxBuf::Type>& pr) {
                   return pr.first == class_id;
                 });
 
-            if (it != labels_.end()) {
-              auto btype = (*it).second;
+            auto btype = Base::Listener::BoxBuf::Type::kUnknown;
+            if (it != labels_pairs_.end()) {
+              btype = (*it).second;
+            }
 
 #if DEBUG_MESSAGES
-              dbgMsg("t:%f,l:%f,b:%f,r:%f, scor:%f, class:%d (boxbuf type:%s)\n",
-                  top, left, bottom, right, scor[i], class_id, boxBufTypeStr(btype));
+            dbgMsg("t:%f,l:%f,b:%f,r:%f, scor:%f, class:%d (%s)\n",
+                top, left, bottom, right, scor[i], class_id, labels_[class_id].c_str());
 #else
-              if (report && !quiet_) {
-                fprintf(stderr, "<%s>", boxBufTypeStr(btype));
-                fflush(stderr);
-              }
-#endif
-              unsigned int top_uint    = top    * height_;
-              unsigned int bottom_uint = bottom * height_;
-              unsigned int left_uint   = left   * width_;
-              unsigned int right_uint  = right  * width_;
-
-              unsigned int width_uint  = right_uint  - left_uint;
-              unsigned int height_uint = bottom_uint - top_uint;
-
-              boxes->push_back(Base::Listener::BoxBuf(
-                  btype, frame_.id, left_uint, top_uint, width_uint, height_uint));
+            if (report && !quiet_) {
+              fprintf(stderr, "<%s>", labels_[class_id].c_str());
+              fflush(stderr);
             }
+#endif
+            unsigned int top_uint    = top    * height_;
+            unsigned int bottom_uint = bottom * height_;
+            unsigned int left_uint   = left   * width_;
+            unsigned int right_uint  = right  * width_;
+
+            unsigned int width_uint  = right_uint  - left_uint;
+            unsigned int height_uint = bottom_uint - top_uint;
+
+            boxes->push_back(Base::Listener::BoxBuf(
+                btype, frame_.id, left_uint, top_uint, width_uint, height_uint));
           }
         }
       }

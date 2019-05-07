@@ -108,7 +108,7 @@ cd ..
 
 This is how you invoke tracker:
 ```
-tracker -?qrutdfwhb [output]
+tracker -?qrutdfwhbyesml [output]
 version: 0.5
 
   where:
@@ -128,6 +128,7 @@ version: 0.5
   (b)itrate    = encoder bitrate     (default = 1000000)
   (y)ield time = yield time          (default = 1000usec)
   thr(e)ads    = number of tflow threads (default = 1)
+  thre(s)hold  = target detect threshold (default = 0.5)
   (m)odel      = path to model       (default = ./models/detect.tflite)
   (l)abels     = path to labels      (default = ./models/labelmap.txt)
   output       = output file name

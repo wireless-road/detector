@@ -116,7 +116,7 @@ class Tflow : public Base, Base::Listener {
   public:
     static std::unique_ptr<Tflow> create(unsigned int yield_time, bool quiet, 
         Encoder* enc, unsigned int width, unsigned int height, const char* model,
-        const char* labels, unsigned int threads);
+        const char* labels, unsigned int threads, float threshold);
     virtual ~Tflow();
 
   public:
@@ -127,7 +127,7 @@ class Tflow : public Base, Base::Listener {
     Tflow(unsigned int yield_time);
     bool init(bool quiet, Encoder* enc, unsigned int width, 
         unsigned int height, const char* model, const char* labels, 
-        unsigned int threads);
+        unsigned int threads, float threshold);
 
   protected:
     virtual bool waitingToRun();
@@ -141,16 +141,15 @@ class Tflow : public Base, Base::Listener {
     unsigned int width_;
     unsigned int height_;
     const unsigned int channels_ = {3};
-    const float threshold_ = {0.1f};
-    unsigned int class_id_max_ = {90};
+    float threshold_;
 
     std::string model_fname_;
     unsigned int model_threads_;
 
     std::string labels_fname_;
-    std::vector<std::pair<unsigned int,Base::Listener::BoxBuf::Type>> labels_;
-    bool addLabel(std::vector<std::pair<unsigned int,Base::Listener::BoxBuf::Type>>& labels,
-      std::vector<std::string>& labs, const char* label, Base::Listener::BoxBuf::Type type);
+    std::vector<std::string> labels_;
+    std::vector<std::pair<unsigned int,Base::Listener::BoxBuf::Type>> labels_pairs_;
+    bool addLabel(const char* label, Base::Listener::BoxBuf::Type type);
 
     class Frame {
       public:

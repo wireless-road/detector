@@ -39,10 +39,10 @@ std::unique_ptr<Capturer> cap(nullptr);
 std::unique_ptr<Tflow>    tfl(nullptr);
 
 void usage() {
-  std::cout << "tracker -?qrutdfwhb [output]" << std::endl;
-  std::cout << "version: 0.5"                  << std::endl;
-  std::cout                                    << std::endl;
-  std::cout << "  where:"                      << std::endl;
+  std::cout << "tracker -?qrutdfwhbyesml [output]" << std::endl;
+  std::cout << "version: 0.5"                     << std::endl;
+  std::cout                                       << std::endl;
+  std::cout << "  where:"                         << std::endl;
   std::cout << "  ?            = this screen"                           << std::endl;
   std::cout << "  (q)uiet      = suppress messages   (default = false)" << std::endl;
   std::cout << "  (r)tsp       = rtsp server         (default = off)"   << std::endl;
@@ -58,7 +58,8 @@ void usage() {
   std::cout << "               = negative value means flip"             << std::endl;
   std::cout << "  (b)itrate    = encoder bitrate     (default = 1000000)" << std::endl;
   std::cout << "  (y)ield time = yield time          (default = 1000usec)" << std::endl;
-  std::cout << "  thr(e)ads    = number of tflow threads (default = 1)" << std::endl;
+  std::cout << "  thr(e)ads    = number of tflow threads (default = 1)"   << std::endl;
+  std::cout << "  thre(s)hold  = target detect threshold (default = 0.5)" << std::endl;
   std::cout << "  (m)odel      = path to model       (default = ./models/detect.tflite)" << std::endl;
   std::cout << "  (l)abels     = path to labels      (default = ./models/labelmap.txt)" << std::endl;
   std::cout << "  output       = output file name"                      << std::endl;
@@ -94,13 +95,14 @@ int main(int argc, char** argv) {
            int hght = 480;
   unsigned int bitrate = 1000000;
   unsigned int threads = 1;
+  float        threshold = 0.5f;
   std::string  model = "./models/detect.tflite";
   std::string  labels = "./models/labelmap.txt";
   std::string  output;
 
   // cmd line options
   int c;
-  while((c = getopt(argc, argv, ":qru:t:d:f:w:h:b:y:e:m:l:")) != -1) {
+  while((c = getopt(argc, argv, ":qru:t:d:f:w:h:b:y:e:s:m:l:")) != -1) {
     switch (c) {
       case 'q': quiet     = true;               break;
       case 'r': streaming = true;               break;
@@ -113,6 +115,7 @@ int main(int argc, char** argv) {
       case 'b': bitrate   = std::stoul(optarg); break;
       case 'y': yield_time= std::stoul(optarg); break;
       case 'e': threads   = std::stoul(optarg); break;
+      case 's': threshold = std::stof(optarg);  break;
       case 'm': model     = optarg;             break;
       case 'l': labels    = optarg;             break;
 
@@ -150,6 +153,7 @@ int main(int argc, char** argv) {
     fprintf(stderr, "     bitrate: %d bps\n", bitrate);
     fprintf(stderr, "  yield time: %d usec\n", yield_time);
     fprintf(stderr, "     threads: %d\n", threads);
+    fprintf(stderr, "   threshold: %f\n", threshold);
     fprintf(stderr, "       model: %s\n", model.c_str());
     fprintf(stderr, "      lables: %s\n", labels.c_str());
     fprintf(stderr, "      output: %s\n\n", (testtime == 0) ? "none" : output.c_str());
@@ -163,7 +167,7 @@ int main(int argc, char** argv) {
   enc = Encoder::create(yield_time, quiet, rtsp.get(), framerate, 
       std::abs(wdth), std::abs(hght), bitrate, output, testtime);
   tfl = Tflow::create(50 * yield_time, quiet, enc.get(), std::abs(wdth), 
-      std::abs(hght), model.c_str(), labels.c_str(), threads);
+      std::abs(hght), model.c_str(), labels.c_str(), threads, threshold);
   cap = Capturer::create(yield_time, quiet, enc.get(), tfl.get(), 
       device, framerate, wdth, hght);
 
