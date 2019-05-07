@@ -196,6 +196,60 @@ section.  You can run this command in a seperate terminal window on your rpi3b+ 
 threads are created and how much of the CPU they are consuming.  The program prints out this 
 command for each run for convenience.
 
+As another example, the follow command allows you to see target detection in realtime:
+```
+./tracker -r -u 192.168.1.85 -t 0 -w -640 -h -480
+```
+This command will unicast RTSP to the given ip address until you hit ctrl-c.  The typical
+output from this command looks like this:
+```
+Test Setup...
+   test time: run until ctrl-c
+      device: /dev/video0
+        rtsp: yes
+rstp address: 192.168.1.85
+   framerate: 20 fps
+       width: 640 pix (flipped)
+      height: 480 pix (flipped)
+     bitrate: 1000000 bps
+  yield time: 1000 usec
+     threads: 4
+   threshold: 0.500000
+       model: ./models/detect.tflite
+      lables: ./models/labelmap.txt
+      output: none
+
+         pid: top -H -p 982
+
+Play this stream using: rtsp://192.168.1.156:8554/camera
+
+
+Hit ctrl-c to terminate...
+
+..%ltperson&gt..<person>..<person>.<person>..<person>..<person>.<person>..<person>.^C
+
+Capturer Results...
+  number of frames captured: 63
+  tflow copy time (us): high:1720 avg:1047 low:8 frames:63
+  enc   copy time (us): high:2649 avg:1205 low:835 frames:63
+
+Tflow Results...
+  image copy time (us): high:1663 avg:951 low:738 frames:9
+  image prep time (us): high:105857 avg:79541 low:75812 frames:9
+  image eval time (us): high:189320 avg:185435 low:180840 frames:9
+  image post time (us): high:209 avg:109 low:68 frames:9
+
+
+Encoder Results...
+  image copy   time (us): high:2634 avg:1170 low:822 frames:63
+  image encode time (us): high:185674 avg:13431 low:3113 frames:63
+
+```
+Notice the rtsp url is given just below the Test Setup report.  You can use cvlc to view this 
+stream like this:
+```
+cvls rtsp://192.168.1.156:8554/camera 
+```
 
 ### Discussion
 
