@@ -73,7 +73,7 @@ Start by building Tensorflow Lite:
 cd your/workspace/raspbian
 cd tensorflow/tensorflow/lite/tools/make
 ./download_dependencies.sh
-./cross_rpi-lib.sh
+./cross_rpi_lib.sh
 ```
 
 Build the RTSP source:
@@ -92,6 +92,50 @@ make
 ```
 
 ### Usage
+
+Tracker requires the model and label file be downloaded to the rpib3+ separately.  Setup a 
+deployment directory and download the model zip file like this:
+```
+# on the target rpi3b+
+cd your/deployment/dir/tracker
+mkdir models
+cd models
+wget http://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip
+unzip coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip
+cd ..
+# copy your tracker executable from your cross compile machine to here.
+```
+
+This is how you invoke tracker:
+```
+tracker -?qrutdfwhb [output]
+version: 0.5
+
+  where:
+  ?            = this screen
+  (q)uiet      = suppress messages   (default = false)
+  (r)tsp       = rtsp server         (default = off)
+  (u)nicast    = rtsp unicast addr   (default = none)
+               = multicast if no address specified
+  (t)esttime   = test duration       (default = 30sec)
+               = 0 to run until ctrl-c
+  (d)device    = video device num    (default = 0)
+  (f)ramerate  = capture framerate   (default = 20)
+  (w)idth      = capture width       (default = 640)
+               = negative value means flip
+  (h)eight     = capture height      (default = 480)
+               = negative value means flip
+  (b)itrate    = encoder bitrate     (default = 1000000)
+  (y)ield time = yield time          (default = 1000usec)
+  thr(e)ads    = number of tflow threads (default = 1)
+  (m)odel      = path to model       (default = ./models/detect.tflite)
+  (l)abels     = path to labels      (default = ./models/labelmap.txt)
+  output       = output file name
+               = leave blank for stdout
+               = no output if testtime is 0
+```
+
+
 
 ### Discussion
 
