@@ -188,15 +188,17 @@ Encoder Results...
 
 ```
 This tells us the test setup and results.  While the test is working it will 
-display a series of '.'.  The output tells us that 221 frames were captured.  That
-they were copied to the tensorflow and encoder worker threads for an averable of about
-1ms each.  The tensorflow thread took, on average ~75ms to scale the input image and
-~181ms to run an inference.  They encoder, on average, took about 7.9ms to encode an 
-image.
+display a series of '.' characters.  The output tells us that 221 frames were captured.  That
+they were copied to the tensorflow and encoder worker threads for an average of 
+~1ms each.  The tensorflow thread took, on average ~75ms to scale the input image and
+~181ms to run an inference.  The tensorflow thread processed 31 frames for 10 seconds so
+the tensorflow thread can handle about 3.1 frames per second.  Also, The encoder, on average, 
+took about 7.9ms to encode an image.
 
-Of special interest, you can run the 'top -H -p 1631' command in a separate terminal window
-on your rpi3b+ to see what threads are created and how much of the CPU they are 
-consuming.  The program prints out this command for each run for convenience.
+Of special interest, is the 'top -H -p 1631' command which is printed just under the 'Test Setup'
+section.  You can run this command in a seperate terminal window on your rpi3b+ to see what 
+threads are created and how much of the CPU they are consuming.  The program prints out this 
+command for each run for convenience.
 
 
 ### Discussion
