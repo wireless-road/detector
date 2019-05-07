@@ -206,7 +206,7 @@ Tracker is composed of a UI thread plus four worker threads.
 duration of the test.
 - capturer.{h,cpp}:  V4L2 image video capture thread.  It sets up the V4L2 device, captures
 frames from the device and sends them to the encoder and target detection threads.
-- encoder.{h,cpp}:  OMX encoder thread.  It waits for images from the capturer thread
+- encoder.{h,cpp}:  OMX encoder thread.  It waits for images from the capture thread
 and encodes them into H264 NALs.  Those NALs are put into an output file and/or sent to the RTSP
 server
 - tflow.{h,cpp}:  Tensorflow Lite target detection engine.  It waits for images from the 
