@@ -1,4 +1,4 @@
-# Tracker
+## Tracker
 
 Tracker is a video pipeline application with target detection for 
 the [raspberry pi 3b+](https://www.raspberrypi.org/products/raspberry-pi-3-model-b-plus). Targets 
