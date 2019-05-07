@@ -47,7 +47,10 @@ cd your/workspace/raspbian
 git clone https://github.com/raspberrypi/tools.git
 cd tools/arm-bcm2708
 git clone https://github.com/africanmudking/gcc-6-arm-linux-gnueabihf.git
-cd ../..
+cd gcc-6-arm-linux-gnueabihf.git
+cat armv6-rpi-linux-gnueabihf.tar.xz.parta* > armv6-rpi-linux-gnueabihf.tar.xz
+tar xvJf armv6-rpi-linux-gnueabihf.tar.xz
+cd ../../..
 ```
 
 Get the rpi3b+ VideoCore software by taring up the '/opt/vc' directory on your rpi3b+
@@ -65,9 +68,34 @@ At this point, you should have all the software you need to build Tracker.
 
 ### Build Notes
 
+Start by building Tensorflow Lite:
+```
+cd your/workspace/raspbian
+cd tensorflow/tensorflow/lite/tools/make
+./download_dependencies.sh
+./cross_rpi-lib.sh
+```
+
+Build the RTSP source:
+```
+cd your/workspace/raspbian
+cd live
+./genMakefiles rpi
+make
+```
+
+Build Tracker:
+```
+cd your/workspace/raspbian
+cd tracker
+make
+```
+
 ### Usage
 
 ### Discussion
 
 ### To Do
 
+- Try different tflite detection models
+- Try NNApi for acceleration
