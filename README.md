@@ -47,7 +47,7 @@ cd your/workspace/raspbian
 git clone https://github.com/raspberrypi/tools.git
 cd tools/arm-bcm2708
 git clone https://github.com/africanmudking/gcc-6-arm-linux-gnueabihf.git
-cd gcc-6-arm-linux-gnueabihf.git
+cd gcc-6-arm-linux-gnueabihf
 cat armv6-rpi-linux-gnueabihf.tar.xz.parta* > armv6-rpi-linux-gnueabihf.tar.xz
 tar xvJf armv6-rpi-linux-gnueabihf.tar.xz
 cd ../../..
@@ -200,9 +200,22 @@ command for each run for convenience.
 
 ### Discussion
 
-todo
+Tracker is composed of a UI thread plus four worker threads.
+
+- tracker.cpp:  This is the UI thread.  It launches the other threads and goes to sleep for the 
+duration of the test.
+- capturer.{h,cpp}:  This is a V4L2 image video capture thread.  It sets up the V4L2 device, captures
+frames from the device and sends them to the encoder and target detection threads.
+- encoder.{h,cpp}:  This is the OMX encoder thread.  It waits for images from the capturer thread
+and encodes them into H264 NALs.  Those NALs are put into an output file and/or sent to the RTSP
+server
+- tflow.{h,cpp}:  This is the Tensorflow Lite target detection engine.  It waits for images from the 
+capturer thread, scales the images for the target model and then runs an inference.  The result are 
+target 'boxes' which are sent to the encoder as an overlay for the image before it is encoded.
+- rtsp.{h,cpp}:  This is the Live555 RTSP server implementation.  
 
 ### To Do
 
+- Get RTSP to work faster than 20fps
 - Try different tflite detection models
-- Try NNApi for acceleration
+- Try tflite delegation for faster target detection
