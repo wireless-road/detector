@@ -31,7 +31,7 @@ LDFLAGS = \
 	-L$(LIVE555)/groupsock \
 	-L$(TFLOWSDK)/tensorflow/lite/tools/make/gen/rpi_armv7l/lib
 
-LIBS = -ltensorflow-lite -lyuv -lliveMedia -lgroupsock -lBasicUsageEnvironment -lUsageEnvironment 
+LIBS = -ltensorflow-lite -lliveMedia -lgroupsock -lBasicUsageEnvironment -lUsageEnvironment 
 LIBS += -lopenmaxil -lbcm_host -lvcos -lvchiq_arm -lbrcmEGL -lbrcmGLESv2 -lpthread -ldl -lrt -lm
 
 INCLUDES = \
