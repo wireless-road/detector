@@ -136,6 +136,8 @@ version: 0.5
                = no output if testtime is 0
 ```
 
+#### Simple Example
+
 A typical example command would be:
 ```
 ./tracker -t 10 -w -640 -h -480 -e 4 output.h264
@@ -195,6 +197,8 @@ Of special interest, is the 'top -H -p 1631' command which is printed just under
 section.  You can run this command in a seperate terminal window on your rpi3b+ to see what 
 threads are created and how much of the CPU they are consuming.  The program prints out this 
 command for each run for convenience.
+
+#### RTSP Example
 
 As another example, the follow command allows you to see target detection in realtime:
 ```
