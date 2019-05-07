@@ -29,6 +29,39 @@ export LIVE555=$RASPBIAN/live
 export TFLOWSDK=$RASPBIAN/tensorflow
 ```
 
+Get Tensorflow, Live555 and Tracker like this:
+```
+cd your/workspace/raspbian
+git clone https://gitlab.com:tylerjbrooks/tensorflow.git
+cd tensorflow
+git checkout rpi
+cd ..
+git clone https://gitlab.com:tylerjbrooks/live.git
+git clone https://gitlab.com:tylerjbrooks/tracker.git
+
+```
+
+Get the Raspbian tool chain like this:
+```
+cd your/workspace/raspbian
+git clone https://github.com/raspberrypi/tools.git
+cd tools/arm-bcm2708
+git clone https://github.com/africanmudking/gcc-6-arm-linux-gnueabihf.git
+cd ../..
+```
+
+Get the rpi3b+ VideoCore software by taring up the '/opt/vc' directory on your rpi3b+
+and copying the tar to your test directory.  Then untar directory.  Something like this:
+```
+# on your rpi3b+
+cd /opt
+tar -vczf vc.tar.gz vc
+# copy vc.tar.gz to your cross compile machine
+cd your/workspace/raspbian
+tar -vxzf vc.tar.gz
+```
+
+At this point, you should have all the software you need to build Tracker.
 
 ### Build Notes
 
