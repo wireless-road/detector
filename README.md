@@ -171,13 +171,11 @@ Capturer Results...
   tflow copy time (us): high:1619 avg:1018 low:10 frames:221
   enc   copy time (us): high:1881 avg:926 low:703 frames:221
 
-
 Tflow Results...
   image copy time (us): high:1173 avg:805 low:731 frames:31
   image prep time (us): high:104681 avg:75502 low:74352 frames:31
   image eval time (us): high:187288 avg:181220 low:178626 frames:31
   image post time (us): high:96 avg:47 low:37 frames:31
-
 
 Encoder Results...
   image copy   time (us): high:1566 avg:908 low:697 frames:221
