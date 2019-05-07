@@ -226,7 +226,7 @@ Play this stream using: rtsp://192.168.1.156:8554/camera
 
 Hit ctrl-c to terminate...
 
-..%ltperson&gt..<person>..<person>.<person>..<person>..<person>.<person>..<person>.^C
+..person..<person>..<person>.<person>..<person>..<person>.<person>..<person>.^C
 
 Capturer Results...
   number of frames captured: 63
