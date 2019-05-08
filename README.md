@@ -151,6 +151,7 @@ will look like this:
 ```
 ./detector -t 10 -w -640 -h -480 -e 4 output.h264
 
+
 Test Setup...
    test time: 10 seconds
       device: /dev/video0
@@ -161,40 +162,51 @@ Test Setup...
      bitrate: 1000000 bps
   yield time: 1000 usec
      threads: 4
+   threshold: 0.500000
        model: ./models/detect.tflite
       lables: ./models/labelmap.txt
       output: output.h264
 
-         pid: top -H -p 1631
+         pid: top -H -p 1350
 
-..................................................
+
+..<person>..<person>..<person>.<person>..<person>..<person>.....
 
 
 Capturer Results...
-  number of frames captured: 221
-  tflow copy time (us): high:1619 avg:1018 low:10 frames:221
-  enc   copy time (us): high:1881 avg:926 low:703 frames:221
+   number of frames captured: 220
+   tflow copy time (us): high:1439 avg:1014 low:9 frames:220
+  encode copy time (us): high:1982 avg:918 low:709 frames:220
+        total test time: 10.113406 sec
+      frames per second: 21.753304 fps
 
+<person>
 Tflow Results...
-  image copy time (us): high:1173 avg:805 low:731 frames:31
-  image prep time (us): high:104681 avg:75502 low:74352 frames:31
-  image eval time (us): high:187288 avg:181220 low:178626 frames:31
-  image post time (us): high:96 avg:47 low:37 frames:31
+  image copy time (us): high:1423 avg:800 low:734 frames:31
+  image prep time (us): high:102889 avg:75376 low:74075 frames:31
+  image eval time (us): high:186585 avg:181407 low:178261 frames:31
+  image post time (us): high:264 avg:96 low:69 frames:31
+       total test time: 10.896498 sec
+     frames per second: 2.844951 fps
+
 
 Encoder Results...
-  image copy   time (us): high:1566 avg:908 low:697 frames:221
-  image encode time (us): high:43862 avg:7901 low:3159 frames:221
+  image copy   time (us): high:1939 avg:900 low:701 frames:220
+  image encode time (us): high:36954 avg:7700 low:3446 frames:220
+         total test time: 10.983922 sec
+       frames per second: 20.029276 fps
 
 ```
 This tells us the test setup and results.  While the test is working it will 
-display a series of '.' characters.  The output tells us that 221 frames were captured.  That
+display a series of '.' characters plus indicating what target was detected.  The 
+output tells us that 220 frames were captured.  That
 they were copied to the tensorflow and encoder worker threads for an average of 
 ~1ms each.  The tensorflow thread took, on average ~75ms to scale the input image and
-~181ms to run an inference.  The tensorflow thread processed 31 frames for 10 seconds so
-the tensorflow thread can handle about 3.1 frames per second.  Also, The encoder, on average, 
-took about 7.9ms to encode an image.
+~181ms to run an inference.  The tensorflow thread processed 31 frames for 10 seconds.  Also, 
+the tensorflow thread worked for ~10.9 seconds and processed 2.8 frames a second.  The encoder
+had similar results.
 
-Of special interest, is the 'top -H -p 1631' command which is printed just under the 'Test Setup'
+Of special interest, is the 'top -H -p 1350' command which is printed just under the 'Test Setup'
 section.  You can run this command in a seperate terminal window on your rpi3b+ to see what 
 threads are created and how much of the CPU they are consuming.  The program prints out this 
 command for each run for convenience.
@@ -208,6 +220,7 @@ As another example, the follow command allows you to see target detection in rea
 This command will unicast RTSP to the given ip address until you hit ctrl-c.  The typical
 output from this command looks like this:
 ```
+
 Test Setup...
    test time: run until ctrl-c
       device: /dev/video0
@@ -218,36 +231,43 @@ rstp address: 192.168.1.85
       height: 480 pix (flipped)
      bitrate: 1000000 bps
   yield time: 1000 usec
-     threads: 4
+     threads: 1
    threshold: 0.500000
        model: ./models/detect.tflite
       lables: ./models/labelmap.txt
       output: none
 
-         pid: top -H -p 982
+         pid: top -H -p 1373
 
 Play this stream using: rtsp://192.168.1.156:8554/camera
 
 
 Hit ctrl-c to terminate...
 
-..<person>..<person>..<person>.<person>..<person>..<person>.<person>..<person>.^C
+....<person>...<person>...<person>..<person>...<person>...<person>...^C
 
 Capturer Results...
-  number of frames captured: 63
-  tflow copy time (us): high:1720 avg:1047 low:8 frames:63
-  enc   copy time (us): high:2649 avg:1205 low:835 frames:63
+   number of frames captured: 590
+   tflow copy time (us): high:1662 avg:1037 low:4 frames:590
+  encode copy time (us): high:2340 avg:978 low:717 frames:590
+        total test time: 29.083607 sec
+      frames per second: 20.286343 fps
 
+<person>
 Tflow Results...
-  image copy time (us): high:1663 avg:951 low:738 frames:9
-  image prep time (us): high:105857 avg:79541 low:75812 frames:9
-  image eval time (us): high:189320 avg:185435 low:180840 frames:9
-  image post time (us): high:209 avg:109 low:68 frames:9
+  image copy time (us): high:1539 avg:810 low:718 frames:50
+  image prep time (us): high:145951 avg:82424 low:74303 frames:50
+  image eval time (us): high:486392 avg:430224 low:416651 frames:50
+  image post time (us): high:859 avg:108 low:54 frames:50
+       total test time: 30.092148 sec
+     frames per second: 1.661563 fps
 
 
 Encoder Results...
-  image copy   time (us): high:2634 avg:1170 low:822 frames:63
-  image encode time (us): high:185674 avg:13431 low:3113 frames:63
+  image copy   time (us): high:2327 avg:958 low:706 frames:588
+  image encode time (us): high:402848 avg:5012 low:3455 frames:588
+         total test time: 30.181433 sec
+       frames per second: 19.482178 fps
 
 ```
 Notice the rtsp url is given just below the Test Setup report.  You can use cvlc to view this 
