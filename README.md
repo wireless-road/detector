@@ -2,13 +2,13 @@
 
 Detector is a video pipeline application for the 
 [raspberry pi 3b+](https://www.raspberrypi.org/products/raspberry-pi-3-model-b-plus) with 
-realtime target detection written in C++. Targets 
-are idenified in the output video with bounding boxes.  Target detection is 
-provided by [Tensorflow Lite](https://www.tensorflow.org/lite) running 
-the [COCO SSD MobileNet v1 model](http://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip).  The resulting
-video can be saved to an H264 elemental stream file or served up via RTSP.
+realtime object detection.  Objects are idenified in the output video with bounding 
+boxes.  Object detection is provided by [Tensorflow Lite](https://www.tensorflow.org/lite) 
+running the [COCO SSD MobileNet v1 model](http://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip).  The resulting 
+video can be saved to an H264 elemental stream file or served up via 
+RTSP.  The application is written in C++. 
 
-Many thanks to the [Tensorflow](https://www.tensorflow.org) project for doing the target detection heavy lifting.
+Many thanks to the [Tensorflow](https://www.tensorflow.org) project for doing the object detection heavy lifting.
 
 Many thinks to the [Live555](http://www.live555.com/) project for providing the RTSP implementation.
 
@@ -129,7 +129,7 @@ version: 0.5
   (b)itrate    = encoder bitrate     (default = 1000000)
   (y)ield time = yield time          (default = 1000usec)
   thr(e)ads    = number of tflow threads (default = 1)
-  thre(s)hold  = target detect threshold (default = 0.5)
+  thre(s)hold  = object detect threshold (default = 0.5)
   (m)odel      = path to model       (default = ./models/detect.tflite)
   (l)abels     = path to labels      (default = ./models/labelmap.txt)
   output       = output file name
@@ -145,7 +145,7 @@ A typical example command would be:
 ```
 
 This command will capture a 640x480 video for 10 seconds and write the H264 elemental stream
-to 'output.h264'.  The TensorFlow Lite target detection engine will use 4 threads.  The output 
+to 'output.h264'.  The TensorFlow Lite object detection engine will use 4 threads.  The output 
 will look like this:
 
 ```
@@ -198,7 +198,7 @@ Encoder Results...
 
 ```
 This tells us the test setup and results.  While the test is working it will 
-display a series of '.' characters plus a label indicating what target was detected 
+display a series of '.' characters plus a label indicating what object was detected 
 (like: person).  The output tells us that 220 frames were captured.  That
 they were copied to the tensorflow and encoder worker threads for an average of 
 ~1ms each.  The tensorflow thread took, on average ~75ms to scale the input image and
@@ -213,7 +213,7 @@ command for each run for convenience.
 
 #### RTSP Example
 
-As another example, the follow command allows you to see target detection in realtime:
+As another example, the follow command allows you to see object detection in realtime:
 ```
 ./detector -r -u 192.168.1.85 -t 0 -w -640 -h -480
 ```
@@ -282,13 +282,13 @@ Detector is composed of a UI thread plus four worker threads.
 - detector.cpp:  UI thread.  It launches the other threads and goes to sleep for the 
 duration of the test.
 - capturer.{h,cpp}:  V4L2 image video capture thread.  It sets up the V4L2 device, captures
-frames from the device and sends them to the encoder and target detection threads.
+frames from the device and sends them to the encoder and object detection threads.
 - encoder.{h,cpp}:  OMX encoder thread.  It waits for images from the capture thread
 and encodes them into H264 NALs.  Those NALs are put into an output file and/or sent to the RTSP
 server
-- tflow.{h,cpp}:  Tensorflow Lite target detection engine.  It waits for images from the 
-capturer thread, scales the images for the target model and then runs an inference.  The result are 
-target 'boxes' which are sent to the encoder as an overlay for the image before it is encoded.
+- tflow.{h,cpp}:  Tensorflow Lite object detection engine.  It waits for images from the 
+capturer thread, scales the images for the object model and then runs an inference.  The result are 
+object 'boxes' which are sent to the encoder as an overlay for the image before it is encoded.
 - rtsp.{h,cpp}:  Live555 RTSP server implementation.  
 
 All the significate threads in the program are derived from a base state machine (base.{h,cpp}).  See
@@ -298,4 +298,4 @@ the comment at the top of base.h for more details.
 
 - Get RTSP to work faster than 20fps
 - Try different tflite detection models
-- Try tflite delegation for faster target detection
+- Try tflite delegation for faster object detection

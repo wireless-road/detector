@@ -59,7 +59,7 @@ void usage() {
   std::cout << "  (b)itrate    = encoder bitrate     (default = 1000000)" << std::endl;
   std::cout << "  (y)ield time = yield time          (default = 1000usec)" << std::endl;
   std::cout << "  thr(e)ads    = number of tflow threads (default = 1)"   << std::endl;
-  std::cout << "  thre(s)hold  = target detect threshold (default = 0.5)" << std::endl;
+  std::cout << "  thre(s)hold  = object detect threshold (default = 0.5)" << std::endl;
   std::cout << "  (m)odel      = path to model       (default = ./models/detect.tflite)" << std::endl;
   std::cout << "  (l)abels     = path to labels      (default = ./models/labelmap.txt)" << std::endl;
   std::cout << "  output       = output file name"                      << std::endl;
