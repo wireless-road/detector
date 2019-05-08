@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Try './tracker -h' for usage.
+ * Try './detector -h' for usage.
  */
 
 #ifndef RTSP_H
@@ -35,7 +35,7 @@
 #include "FramedSource.hh"
 #include "GroupsockHelper.hh"
 
-namespace tracker {
+namespace detector {
 
 class Rtsp;
 class LiveSource : public FramedSource {
@@ -132,6 +132,6 @@ class Rtsp : public Base, Base::Listener {
     static void afterPlay(void* data);
 };
 
-} // namespace tracker
+} // namespace detector
 
 #endif // RTSP_H

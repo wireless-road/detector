@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Try './tracker -h' for usage.
+ * Try './detector -h' for usage.
  */
 
 #ifndef TFLOW_H
@@ -37,7 +37,7 @@
 #include <tensorflow/lite/kernels/internal/tensor_ctypes.h>
 #include <tensorflow/lite/model.h>
 
-namespace tracker {
+namespace detector {
 
 template <class T>
 void resize(T* out, uint8_t* in, 
@@ -188,6 +188,6 @@ class Tflow : public Base, Base::Listener {
 #endif
 };
 
-} // namespace tracker
+} // namespace detector
 
 #endif // TFLOW_H

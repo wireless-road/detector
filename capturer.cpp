@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Try './tracker -h' for usage.
+ * Try './detector -h' for usage.
  */
 
 #include <stdio.h>
@@ -32,7 +32,7 @@
 
 #include "capturer.h"
 
-namespace tracker {
+namespace detector {
 
 Capturer::Capturer(unsigned int yieldtime) 
   : Base(yieldtime), 
@@ -465,5 +465,5 @@ int Capturer::xioctl(int fd, int request, void* arg) {
   return res;
 }
 
-} // namespace tracker
+} // namespace detector
 

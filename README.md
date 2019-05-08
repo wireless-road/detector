@@ -1,6 +1,6 @@
-## Tracker
+## Detector
 
-Tracker is a video pipeline application with target detection for 
+Detector is a video pipeline application with target detection for 
 the [raspberry pi 3b+](https://www.raspberrypi.org/products/raspberry-pi-3-model-b-plus). Targets 
 are idenified in the output video with bounding boxes.  Target detection is 
 provided by [Tensorflow Lite](https://www.tensorflow.org/lite) running 
@@ -13,9 +13,9 @@ Many thinks to the [Live555](http://www.live555.com/) project for providing the 
 
 ### Installation
 
-Tracker is cross compiled on a desktop and copied to the target rpi3b+.  As such, the build 
+Detector is cross compiled on a desktop and copied to the target rpi3b+.  As such, the build 
 process will require some environment variables so it can find the various pieces of 
-Tracker.  The following is how my environment is setup:
+Detector.  The following is how my environment is setup:
 ```
 # project directory
 export RASPBIAN=~/your/workspace/raspbian
@@ -29,7 +29,7 @@ export LIVE555=$RASPBIAN/live
 export TFLOWSDK=$RASPBIAN/tensorflow
 ```
 
-Get Tensorflow, Live555 and Tracker like this:
+Get Tensorflow, Live555 and Detector like this:
 ```
 cd your/workspace/raspbian
 git clone https://gitlab.com:tylerjbrooks/tensorflow.git
@@ -37,7 +37,7 @@ cd tensorflow
 git checkout rpi
 cd ..
 git clone https://gitlab.com:tylerjbrooks/live.git
-git clone https://gitlab.com:tylerjbrooks/tracker.git
+git clone https://gitlab.com:tylerjbrooks/detector.git
 
 ```
 
@@ -64,7 +64,7 @@ cd your/workspace/raspbian
 tar -vxzf vc.tar.gz
 ```
 
-At this point, you should have all the software you need to build Tracker.
+At this point, you should have all the software you need to build Detector.
 
 ### Build Notes
 
@@ -84,31 +84,31 @@ cd live
 make
 ```
 
-Build Tracker:
+Build Detector:
 ```
 cd your/workspace/raspbian
-cd tracker
+cd detector
 make
 ```
 
 ### Usage
 
-Tracker requires the model and label file be downloaded to the rpib3+ separately.  Setup a 
+Detector requires the model and label file be downloaded to the rpib3+ separately.  Setup a 
 deployment directory and download the model zip file like this:
 ```
 # on the target rpi3b+
-cd your/deployment/dir/tracker
+cd your/deployment/dir/detector
 mkdir models
 cd models
 wget http://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip
 unzip coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip
 cd ..
-# copy your tracker executable from your cross compile machine to here.
+# copy your detector executable from your cross compile machine to here.
 ```
 
-This is how you invoke tracker:
+This is how you invoke detector:
 ```
-tracker -?qrutdfwhbyesml [output]
+detector -?qrutdfwhbyesml [output]
 version: 0.5
 
   where:
@@ -140,7 +140,7 @@ version: 0.5
 
 A typical example command would be:
 ```
-./tracker -t 10 -w -640 -h -480 -e 4 output.h264
+./detector -t 10 -w -640 -h -480 -e 4 output.h264
 ```
 
 This command will capture a 640x480 video for 10 seconds and write the H264 elemental stream
@@ -148,7 +148,7 @@ to 'output.h264'.  The TensorFlow Lite target detection engine will use 4 thread
 will look like this:
 
 ```
-./tracker -t 10 -w -640 -h -480 -e 4 output.h264
+./detector -t 10 -w -640 -h -480 -e 4 output.h264
 
 Test Setup...
    test time: 10 seconds
@@ -202,7 +202,7 @@ command for each run for convenience.
 
 As another example, the follow command allows you to see target detection in realtime:
 ```
-./tracker -r -u 192.168.1.85 -t 0 -w -640 -h -480
+./detector -r -u 192.168.1.85 -t 0 -w -640 -h -480
 ```
 This command will unicast RTSP to the given ip address until you hit ctrl-c.  The typical
 output from this command looks like this:
@@ -257,9 +257,9 @@ cvls rtsp://192.168.1.156:8554/camera
 
 ### Discussion
 
-Tracker is composed of a UI thread plus four worker threads.
+Detector is composed of a UI thread plus four worker threads.
 
-- tracker.cpp:  UI thread.  It launches the other threads and goes to sleep for the 
+- detector.cpp:  UI thread.  It launches the other threads and goes to sleep for the 
 duration of the test.
 - capturer.{h,cpp}:  V4L2 image video capture thread.  It sets up the V4L2 device, captures
 frames from the device and sends them to the encoder and target detection threads.

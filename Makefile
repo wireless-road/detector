@@ -7,9 +7,9 @@
 
 CXX = $(RASPBIANCROSS)g++
 
-SRC = tracker.cpp base.cpp capturer.cpp tflow.cpp encoder.cpp rtsp.cpp utils.cpp
+SRC = detector.cpp base.cpp capturer.cpp tflow.cpp encoder.cpp rtsp.cpp utils.cpp
 OBJ = $(SRC:.cpp=.o)
-EXE = tracker
+EXE = detector
 
 # Turn on 'CAPTURE_ONE_RAW_FRAME' to write the 10th frame
 # in to './frame_wxh_ffps.yuv' file (w=width, h=height, f=framerate).

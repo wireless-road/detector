@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Try './tracker -h' for usage.
+ * Try './detector -h' for usage.
  */
 
 #include <chrono>
@@ -22,7 +22,7 @@
 
 #include "encoder.h"
 
-namespace tracker {
+namespace detector {
 
 #define OMX_INIT_STRUCTURE(a) \
   std::memset(&(a), 0, sizeof(a)); \
@@ -598,5 +598,5 @@ bool Encoder::waitingToHalt() {
   return true;
 }
 
-} // namespace tracker
+} // namespace detector
 

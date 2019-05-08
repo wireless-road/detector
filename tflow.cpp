@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Try './tracker -h' for usage.
+ * Try './detector -h' for usage.
  */
 
 #include <chrono>
@@ -24,7 +24,7 @@
 
 #include "tflow.h"
 
-namespace tracker {
+namespace detector {
 
 Tflow::Tflow(unsigned int yield_time) 
   : Base(yield_time),
@@ -383,5 +383,5 @@ bool Tflow::waitingToHalt() {
   return true;
 }
 
-} // namespace tracker
+} // namespace detector
 

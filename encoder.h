@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Try './tracker -h' for usage.
+ * Try './detector -h' for usage.
  */
 
 #ifndef ENCODER_H
@@ -42,7 +42,7 @@ extern "C" {
 #include <IL/OMX_Broadcom.h>
 }
 
-namespace tracker {
+namespace detector {
 
 class Encoder : public Base, Base::Listener {
   public:
@@ -147,6 +147,6 @@ class Encoder : public Base, Base::Listener {
 #endif
 };
 
-} // namespace tracker
+} // namespace detector
 
 #endif // ENCODER_H

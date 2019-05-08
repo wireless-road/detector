@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Try './tracker -h' for usage.
+ * Try './detector -h' for usage.
  */
 
 #include <chrono>
 
 #include "base.h"
 
-namespace tracker {
+namespace detector {
 
 Base::Base(unsigned int yield_time)
   : yield_time_(yield_time),
@@ -187,5 +187,5 @@ void Base::wrapper0(Base* self) {
   self->wrapper();
 }
 
-} // namespace tracker
+} // namespace detector
 

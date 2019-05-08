@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Try './tracker -h' for usage.
+ * Try './detector -h' for usage.
  *
  * ----------
  *
@@ -56,7 +56,7 @@
 
 #include "utils.h"
 
-namespace tracker {
+namespace detector {
 
 class Base {
   protected:
@@ -170,6 +170,6 @@ class Base {
     std::thread thread_;
 };
 
-} // namespace tracker
+} // namespace detector
 
 #endif // BASE_H

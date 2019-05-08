@@ -1,4 +1,4 @@
-tracker
+detector
 *.o
 frm_*
 *.h264

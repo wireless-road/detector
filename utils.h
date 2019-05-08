@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Try './tracker -h' for usage.
+ * Try './detector -h' for usage.
  */
 
 #ifndef UTILS_H
@@ -29,7 +29,7 @@
 #include <condition_variable>
 #include <cstring>
 
-namespace tracker {
+namespace detector {
 
 #define ALIGN_X(x,y) (((x) + (y-1)) & ~(y-1))
 #define ALIGN_4K(x)   ALIGN_X(x,4094)
@@ -157,6 +157,6 @@ class Differ {
     uint64_t low_;
 };
 
-} // namespace tracker
+} // namespace detector
 
 #endif // UTILS_H

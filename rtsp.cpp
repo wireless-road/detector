@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Try './tracker -h' for usage.
+ * Try './detector -h' for usage.
  */
 
 #include <chrono>
@@ -22,7 +22,7 @@
 
 #include "rtsp.h"
 
-namespace tracker {
+namespace detector {
 
 LiveSource::LiveSource(UsageEnvironment* env, Rtsp* owner) 
   : FramedSource(*env), env_(env), owner_(owner) {
@@ -241,8 +241,8 @@ void Rtsp::liveProc() {
 
   // create media session
   dbgMsg("create media session\n");
-  ServerMediaSession* sms = ServerMediaSession::createNew(*env_, "camera", "tracker",
-      "Session streamed by -tracker-", unicast_.empty() ? True : False);
+  ServerMediaSession* sms = ServerMediaSession::createNew(*env_, "camera", "detector",
+      "Session streamed by -detector-", unicast_.empty() ? True : False);
   sms->addSubsession(PassiveServerMediaSubsession::createNew(*video_snk, rtcp));
   rtsp_server->addServerMediaSession(sms);
 
@@ -341,5 +341,5 @@ bool Rtsp::waitingToHalt() {
   return true;
 }
 
-} // namespace tracker
+} // namespace detector
 

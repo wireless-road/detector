@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Try './tracker -h' for usage.
+ * Try './detector -h' for usage.
  */
 
 #include <iostream>
@@ -31,7 +31,7 @@
 #include "capturer.h"
 #include "tflow.h"
 
-namespace tracker {
+namespace detector {
 
 std::unique_ptr<Encoder>  enc(nullptr);
 std::unique_ptr<Rtsp>     rtsp(nullptr);
@@ -39,7 +39,7 @@ std::unique_ptr<Capturer> cap(nullptr);
 std::unique_ptr<Tflow>    tfl(nullptr);
 
 void usage() {
-  std::cout << "tracker -?qrutdfwhbyesml [output]" << std::endl;
+  std::cout << "detector -?qrutdfwhbyesml [output]" << std::endl;
   std::cout << "version: 0.5"                     << std::endl;
   std::cout                                       << std::endl;
   std::cout << "  where:"                         << std::endl;
@@ -221,9 +221,9 @@ int main(int argc, char** argv) {
   return 0;
 }
 
-} // namespace tracker
+} // namespace detector
 
 int main(int argc, char** argv) {
-  return tracker::main(argc, argv);
+  return detector::main(argc, argv);
 }
 

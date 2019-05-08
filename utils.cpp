@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Try './tracker -h' for usage.
+ * Try './detector -h' for usage.
  */
 
 #include "utils.h"
 
-namespace tracker {
+namespace detector {
 
 static void yuv420_to_yuv420(
     unsigned char* src, unsigned int src_width, unsigned int src_height,
@@ -585,5 +585,5 @@ const char* PixelFormatToStr(unsigned int pix) {
   return "unknown";
 }
 
-} // namespace tracker
+} // namespace detector
 

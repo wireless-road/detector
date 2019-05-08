@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Try './tracker -h' for usage.
+ * Try './detector -h' for usage.
  */
 
 #ifndef CAPTURER_H
@@ -29,7 +29,7 @@
 #include "encoder.h"
 #include "tflow.h"
 
-namespace tracker {
+namespace detector {
 
 class Capturer : public Base {
   public:
@@ -90,6 +90,6 @@ class Capturer : public Base {
 #endif
 };
 
-} // namespace tracker
+} // namespace detector
 
 #endif // CAPTURER_H
