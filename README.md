@@ -198,8 +198,8 @@ Encoder Results...
 
 ```
 This tells us the test setup and results.  While the test is working it will 
-display a series of '.' characters plus indicating what target was detected (i.e. <person>).  The 
-output tells us that 220 frames were captured.  That
+display a series of '.' characters plus a label indicating what target was detected 
+(like: person).  The output tells us that 220 frames were captured.  That
 they were copied to the tensorflow and encoder worker threads for an average of 
 ~1ms each.  The tensorflow thread took, on average ~75ms to scale the input image and
 ~181ms to run an inference.  Also, 
