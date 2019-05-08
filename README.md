@@ -230,7 +230,7 @@ Play this stream using: rtsp://192.168.1.156:8554/camera
 
 Hit ctrl-c to terminate...
 
-..person..<person>..<person>.<person>..<person>..<person>.<person>..<person>.^C
+..<person>..<person>..<person>.<person>..<person>..<person>.<person>..<person>.^C
 
 Capturer Results...
   number of frames captured: 63
@@ -252,7 +252,7 @@ Encoder Results...
 Notice the rtsp url is given just below the Test Setup report.  You can use cvlc to view this 
 stream like this:
 ```
-cvls rtsp://192.168.1.156:8554/camera 
+cvlc rtsp://192.168.1.156:8554/camera 
 ```
 
 ### Discussion
