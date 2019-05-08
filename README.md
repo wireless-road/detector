@@ -198,13 +198,13 @@ Encoder Results...
 
 ```
 This tells us the test setup and results.  While the test is working it will 
-display a series of '.' characters plus indicating what target was detected.  The 
+display a series of '.' characters plus indicating what target was detected (i.e. <person>).  The 
 output tells us that 220 frames were captured.  That
 they were copied to the tensorflow and encoder worker threads for an average of 
 ~1ms each.  The tensorflow thread took, on average ~75ms to scale the input image and
-~181ms to run an inference.  The tensorflow thread processed 31 frames for 10 seconds.  Also, 
-the tensorflow thread worked for ~10.9 seconds and processed 2.8 frames a second.  The encoder
-had similar results.
+~181ms to run an inference.  Also, 
+the tensorflow thread worked for ~10.9 seconds and processed 50 frames.  This means it 
+processed ~2.8 frames a second.  The encoder had similar results.
 
 Of special interest, is the 'top -H -p 1350' command which is printed just under the 'Test Setup'
 section.  You can run this command in a seperate terminal window on your rpi3b+ to see what 
@@ -253,7 +253,6 @@ Capturer Results...
         total test time: 29.083607 sec
       frames per second: 20.286343 fps
 
-<person>
 Tflow Results...
   image copy time (us): high:1539 avg:810 low:718 frames:50
   image prep time (us): high:145951 avg:82424 low:74303 frames:50
