@@ -42,6 +42,7 @@ LiveSource::~LiveSource() {
 void LiveSource::doGetNextFrame() {
   if (owner_->live_watch_) {
     dbgMsg("doGetNextFrame: shutting down\n");
+    handleClosure();
     return;
   }
   deliverFrame();
@@ -308,12 +309,15 @@ void Rtsp::afterPlay(void* data) {
 
 bool Rtsp::running() {
   if (rtsp_on_) {
-    std::unique_lock<std::timed_mutex> lck(nal_lock_, std::defer_lock);
-    if (lck.try_lock_for(std::chrono::microseconds(Base::Listener::timeout_))) {
-      if (nal_work_.size() != 0) {
-        env_->taskScheduler().triggerEvent(live_src_->evt_id_, live_src_);
-      }
-    }
+    env_->taskScheduler().triggerEvent(live_src_->evt_id_, live_src_);
+//    std::unique_lock<std::timed_mutex> lck(nal_lock_, std::defer_lock);
+//    if (lck.try_lock_for(std::chrono::microseconds(Base::Listener::timeout_))) {
+//      if (nal_work_.size() != 0) {
+//        env_->taskScheduler().triggerEvent(live_src_->evt_id_, live_src_);
+//        std::this_thread::sleep_for(std::chrono::microseconds(100));
+//        env_->taskScheduler().triggerEvent(live_src_->evt_id_, live_src_);
+//      }
+//    }
   }
   return true;
 }
