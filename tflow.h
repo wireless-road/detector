@@ -170,6 +170,7 @@ class Tflow : public Base, Base::Listener {
     Differ differ_prep_;
     Differ differ_eval_;
     Differ differ_post_;
+    Differ differ_tot_;
 
     unsigned int post_id_ = {0};
     const unsigned int result_num_ = {10};

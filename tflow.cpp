@@ -151,6 +151,7 @@ bool Tflow::waitingToRun() {
         });
 #endif
 
+    differ_tot_.begin();
     tflow_on_ = true;
   }
 
@@ -356,6 +357,7 @@ bool Tflow::waitingToHalt() {
 
   if (tflow_on_) {
     tflow_on_ = false;
+    differ_tot_.end();
 
     // finish processing
     while (!tflow_empty_) {
@@ -364,7 +366,7 @@ bool Tflow::waitingToHalt() {
 
     // report
     if (!quiet_) {
-      fprintf(stderr, "\n\nTflow Results...\n");
+      fprintf(stderr, "\nTflow Results...\n");
       fprintf(stderr, "  image copy time (us): high:%u avg:%u low:%u frames:%d\n", 
           differ_copy_.getHigh_usec(), differ_copy_.getAvg_usec(), 
           differ_copy_.getLow_usec(),  differ_copy_.getCnt());
@@ -377,6 +379,10 @@ bool Tflow::waitingToHalt() {
       fprintf(stderr, "  image post time (us): high:%u avg:%u low:%u frames:%d\n", 
           differ_post_.getHigh_usec(), differ_post_.getAvg_usec(), 
           differ_post_.getLow_usec(),  differ_post_.getCnt());
+      fprintf(stderr, "       total test time: %f sec\n", 
+          differ_tot_.getAvg_usec() / 1000000.f);
+      fprintf(stderr, "     frames per second: %f fps\n", 
+          differ_post_.getCnt() * 1000000.f / differ_tot_.getAvg_usec());
       fprintf(stderr, "\n");
     }
   }

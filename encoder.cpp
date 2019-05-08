@@ -402,6 +402,7 @@ bool Encoder::waitingToRun() {
     }
     blockOnStateChange(OMX_StateExecuting);
 
+    differ_tot_.begin();
     encode_on_ = true;
   }
 
@@ -508,6 +509,7 @@ bool Encoder::waitingToHalt() {
 
   if (encode_on_) {
     encode_on_ = false;
+    differ_tot_.end();
 
     // flush the port buffers
     dbgMsg("flush the port buffers\n");
@@ -593,6 +595,11 @@ bool Encoder::waitingToHalt() {
       fprintf(stderr, "  image encode time (us): high:%u avg:%u low:%u frames:%d\n", 
           differ_encode_.getHigh_usec(), differ_encode_.getAvg_usec(), 
           differ_encode_.getLow_usec(),differ_encode_.getCnt());
+      fprintf(stderr, "         total test time: %f sec\n", 
+          differ_tot_.getAvg_usec() / 1000000.f);
+      fprintf(stderr, "       frames per second: %f fps\n", 
+          differ_encode_.getCnt() * 1000000.f / differ_tot_.getAvg_usec());
+      fprintf(stderr, "\n");
     }
   }
   return true;

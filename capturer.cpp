@@ -314,6 +314,7 @@ bool Capturer::waitingToRun() {
       return false;
     }
 
+    differ_tot_.begin();
     stream_on_ = true;
   }
 
@@ -408,6 +409,7 @@ bool Capturer::waitingToHalt() {
   if (stream_on_) {
 
     stream_on_ = false;
+    differ_tot_.end();
 
     // v4l2 stream off
     dbgMsg("v4l2 stream off\n");
@@ -444,13 +446,18 @@ bool Capturer::waitingToHalt() {
     // report
     if (!quiet_) {
       fprintf(stderr, "\n\nCapturer Results...\n");
-      fprintf(stderr, "  number of frames captured: %d\n", frame_cnt_); 
-      fprintf(stderr, "  tflow copy time (us): high:%u avg:%u low:%u frames:%d\n", 
+      fprintf(stderr, "   number of frames captured: %d\n", frame_cnt_); 
+      fprintf(stderr, "   tflow copy time (us): high:%u avg:%u low:%u frames:%d\n", 
           differ_tfl_.getHigh_usec(), differ_tfl_.getAvg_usec(), 
           differ_tfl_.getLow_usec(),  differ_tfl_.getCnt());
-      fprintf(stderr, "  enc   copy time (us): high:%u avg:%u low:%u frames:%d\n", 
+      fprintf(stderr, "  encode copy time (us): high:%u avg:%u low:%u frames:%d\n", 
           differ_enc_.getHigh_usec(), differ_enc_.getAvg_usec(), 
           differ_enc_.getLow_usec(),  differ_enc_.getCnt());
+      fprintf(stderr, "        total test time: %f sec\n", 
+          differ_tot_.getAvg_usec() / 1000000.f);
+      fprintf(stderr, "      frames per second: %f fps\n", 
+          differ_enc_.getCnt() * 1000000.f / differ_tot_.getAvg_usec());
+      fprintf(stderr, "\n");
     }
   }
 

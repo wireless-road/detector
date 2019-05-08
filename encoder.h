@@ -136,6 +136,7 @@ class Encoder : public Base, Base::Listener {
 
     Differ differ_copy_;
     Differ differ_encode_;
+    Differ differ_tot_;
 
     std::timed_mutex targets_lock_;
     std::shared_ptr<std::vector<Base::Listener::BoxBuf>> targets_;

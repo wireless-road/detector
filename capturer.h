@@ -82,6 +82,7 @@ class Capturer : public Base {
 
     Differ differ_enc_;
     Differ differ_tfl_;
+    Differ differ_tot_;
 
 #ifdef CAPTURE_ONE_RAW_FRAME
     const unsigned int capture_cnt_ = {10};
