@@ -2,7 +2,7 @@
 
 Detector is a video pipeline application for the 
 [raspberry pi 3b+](https://www.raspberrypi.org/products/raspberry-pi-3-model-b-plus) with 
-realtime object detection.  Objects are idenified in the output video with bounding 
+realtime object detection.  Objects are identified in the output video with bounding 
 boxes.  Object detection is provided by [Tensorflow Lite](https://www.tensorflow.org/lite) 
 running the [COCO SSD MobileNet v1 model](http://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip).  The resulting 
 video can be saved to an H264 elemental stream file or served up via 
