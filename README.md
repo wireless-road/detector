@@ -4,9 +4,8 @@ Detector is a video pipeline application for the
 [raspberry pi 3b+](https://www.raspberrypi.org/products/raspberry-pi-3-model-b-plus) with 
 realtime object detection.  Objects are identified in the output video with bounding 
 boxes.  Object detection is provided by [Tensorflow Lite](https://www.tensorflow.org/lite) 
-running the [COCO SSD MobileNet v1 model](http://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip).  The resulting 
-video can be saved to an H264 elemental stream file or served up via 
-RTSP.  The application is written in C++. 
+running the [COCO SSD MobileNet v1 model](http://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip).  The resulting video can be saved to an H264 elemental 
+stream file or served up via RTSP.  The application is written in C++. 
 
 Many thanks to the [Tensorflow](https://www.tensorflow.org) project for doing the object detection heavy lifting.
 
@@ -293,6 +292,23 @@ object 'boxes' which are sent to the encoder as an overlay for the image before 
 
 All the significate threads in the program are derived from a base state machine (base.{h,cpp}).  See
 the comment at the top of base.h for more details.
+
+### Notes
+
+For improved performance, use the [COCO SSD MobileNet V2 Quantized model](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v2_quantized_300x300_coco_2019_01_03.tar.gz) instead of the V1 model.  However, this model requires some processing to make it tensorflow lite compatible before you can use it.  If you don't 
+have tensorflow installed then follow [these](https://www.tensorflow.org/install/pip#package-location) instructions.  Then use this command to processing model into a tensorflow lite compatible model:
+```
+tflite_convert --graph_def_file=./tflite_graph.pb \
+--output_file=./detect.tflite \
+--input_shapes=1,300,300,3 \
+--input_arrays=normalized_input_image_tensor \
+--output_arrays='TFLite_Detection_PostProcess','TFLite_Detection_PostProcess:1','TFLite_Detection_PostProcess:2','TFLite_Detection_PostProcess:3' \
+--inference_type=QUANTIZED_UINT8 \
+--mean_values=128 \
+--std_dev_values=128 \
+--change_concat_input_ranges=false \
+--allow_custom_ops
+```
 
 ### To Do
 
