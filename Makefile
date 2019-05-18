@@ -33,7 +33,7 @@ LDFLAGS = \
 	-L$(TFLOWSDK)/tensorflow/lite/tools/make/gen/rpi_armv7l/lib \
 	-L$(EDGETPUSDK)/libedgetpu
 
-LIBS = -ltensorflow-lite -ledgetpu -lliveMedia -lgroupsock -lBasicUsageEnvironment -lUsageEnvironment 
+LIBS = -ltensorflow-lite -ledgetpu -lunwind -lliveMedia -lgroupsock -lBasicUsageEnvironment -lUsageEnvironment 
 LIBS += -lopenmaxil -lbcm_host -lvcos -lvchiq_arm -lbrcmEGL -lbrcmGLESv2 -lpthread -ldl -lrt -lm
 
 INCLUDES = \
