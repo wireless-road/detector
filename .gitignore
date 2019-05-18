@@ -3,4 +3,5 @@ detector
 frm_*
 *.h264
 *.swp
+models
 
