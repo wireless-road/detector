@@ -4,6 +4,7 @@
 #   LIBYUV is the location of your libyuv
 #   OMXSUPPORT is the location of your 'video core' support (OMX and such)
 #   TFLOWLITESDK is the location of your 'tensorflow-lite' sdk
+#   EDGETPUSKD is the location of your 'edge tpu' sdk
 
 CXX = $(RASPBIANCROSS)g++
 
@@ -29,9 +30,10 @@ LDFLAGS = \
 	-L$(LIVE555)/UsageEnvironment \
 	-L$(LIVE555)/BasicUsageEnvironment \
 	-L$(LIVE555)/groupsock \
-	-L$(TFLOWSDK)/tensorflow/lite/tools/make/gen/rpi_armv7l/lib
+	-L$(TFLOWSDK)/tensorflow/lite/tools/make/gen/rpi_armv7l/lib \
+	-L$(EDGETPUSDK)/libedgetpu
 
-LIBS = -ltensorflow-lite -lliveMedia -lgroupsock -lBasicUsageEnvironment -lUsageEnvironment 
+LIBS = -ltensorflow-lite -ledgetpu -lliveMedia -lgroupsock -lBasicUsageEnvironment -lUsageEnvironment 
 LIBS += -lopenmaxil -lbcm_host -lvcos -lvchiq_arm -lbrcmEGL -lbrcmGLESv2 -lpthread -ldl -lrt -lm
 
 INCLUDES = \
@@ -43,7 +45,8 @@ INCLUDES = \
 	-I$(LIVE555)/BasicUsageEnvironment/include \
 	-I$(LIVE555)/groupsock/include \
 	-I$(TFLOWSDK) \
-	-I$(TFLOWSDK)/tensorflow/lite/tools/make/downloads/flatbuffers/include
+	-I$(TFLOWSDK)/tensorflow/lite/tools/make/downloads/flatbuffers/include \
+	-I$(EDGETPUSDK)/libedgetpu
 
 
 $(EXE): $(OBJ)

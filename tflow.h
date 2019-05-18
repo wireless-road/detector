@@ -37,6 +37,8 @@
 #include <tensorflow/lite/kernels/internal/tensor_ctypes.h>
 #include <tensorflow/lite/model.h>
 
+#include <edgetpu.h>
+
 namespace detector {
 
 template <class T>
@@ -165,6 +167,7 @@ class Tflow : public Base, Base::Listener {
 
     std::unique_ptr<tflite::FlatBufferModel> model_;
     std::unique_ptr<tflite::Interpreter> interpreter_;
+    edgetpu::EdgeTpuContext* edgetpu_context_;
 
     Differ differ_copy_;
     Differ differ_prep_;

@@ -114,6 +114,9 @@ bool Tflow::waitingToRun() {
 
   if (!tflow_on_) {
 
+    edgetpu_context_ = 
+      edgetpu::EdgeTpuManager::GetSingleton()->NewEdgeTpuContext().release();
+
     // make model and interpreter
     dbgMsg("make model and interpreter\n");
     model_ = tflite::FlatBufferModel::BuildFromFile(model_fname_.c_str());
