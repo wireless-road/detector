@@ -120,11 +120,25 @@ bool Tflow::waitingToRun() {
     // make model and interpreter
     dbgMsg("make model and interpreter\n");
     model_ = tflite::FlatBufferModel::BuildFromFile(model_fname_.c_str());
+
+    dbgMsg("resolver\n");
     tflite::ops::builtin::BuiltinOpResolver resolver;
-    tflite::InterpreterBuilder builder(*model_, resolver);
-    builder(&interpreter_);
-    interpreter_->UseNNAPI(false);
-    interpreter_->SetNumThreads(model_threads_);
+    dbgMsg("addCustom\n");
+    resolver.AddCustom(edgetpu::kCustomOp, edgetpu::RegisterCustomOp());
+    dbgMsg("build interpreter\n");
+    if (tflite::InterpreterBuilder(*model_, resolver)(&interpreter_) != kTfLiteOk) {
+      dbgMsg("build interpreter failed\n");
+      return false;
+    }
+    dbgMsg("set context\n");
+    interpreter_->SetExternalContext(kTfLiteEdgeTpuContext, edgetpu_context_);
+    dbgMsg("set num of threads\n");
+    interpreter_->SetNumThreads(1);
+    dbgMsg("allocate tensors\n");
+    if (interpreter_->AllocateTensors() != kTfLiteOk) {
+      dbgMsg("allocatetensors failed\n");
+      return false;
+    }
 
     // read labels file
     dbgMsg("read labels file\n");
@@ -167,11 +181,6 @@ bool Tflow::prep() {
   int input = interpreter_->inputs()[0];
   const std::vector<int> inputs = interpreter_->inputs();
   const std::vector<int> outputs = interpreter_->outputs();
-
-  if (interpreter_->AllocateTensors() != kTfLiteOk) {
-    dbgMsg("allocatetensors failed\n");
-    return false;
-  }
 
   TfLiteIntArray* dims = interpreter_->tensor(input)->dims;
   int wanted_height = dims->data[1];
