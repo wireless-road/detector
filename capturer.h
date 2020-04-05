@@ -25,6 +25,7 @@
 #include <memory>
 
 #include "utils.h"
+#include "listener.h"
 #include "base.h"
 #include "encoder.h"
 #include "tflow.h"
@@ -74,7 +75,7 @@ class Capturer : public Base {
     int fd_video_;
 
     const unsigned int framebuf_num_ = {3};
-    std::vector<Base::Listener::FrameBuf> framebuf_pool_;
+    std::vector<FrameBuf> framebuf_pool_;
 
     std::atomic<bool> stream_on_;
 

@@ -28,6 +28,7 @@
 #include <vector>
 
 #include "utils.h"
+#include "listener.h"
 #include "base.h"
 
 #include "liveMedia.hh"
@@ -61,14 +62,14 @@ class LiveSource : public FramedSource {
     void deliverFrame();
 };
 
-class Rtsp : public Base, Base::Listener {
+class Rtsp : public Base, Listener<NalBuf> {
   public:
     static std::unique_ptr<Rtsp> create(unsigned int yield_time, bool quiet, 
         unsigned int bitrate, unsigned int framerate, std::string& unicast);
     virtual ~Rtsp();
 
   public:
-    virtual bool addMessage(Base::Listener::Message msg, void* data);
+    virtual bool addMessage(NalBuf* data);
 
   protected:
     Rtsp() = delete;

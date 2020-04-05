@@ -28,6 +28,7 @@
 #include <vector>
 
 #include "utils.h"
+#include "listener.h"
 #include "base.h"
 #include "rtsp.h"
 
@@ -44,7 +45,8 @@ extern "C" {
 
 namespace detector {
 
-class Encoder : public Base, Base::Listener {
+class Encoder : public Base, Listener<FrameBuf>, 
+  Listener<std::shared_ptr<std::vector<BoxBuf>>> {
   public:
     static std::unique_ptr<Encoder> create(unsigned int yield_time, bool quiet, 
         Rtsp* rtsp, unsigned int framerate, unsigned int width, unsigned int height, 
@@ -52,7 +54,8 @@ class Encoder : public Base, Base::Listener {
     virtual ~Encoder();
 
   public:
-    virtual bool addMessage(Base::Listener::Message msg, void* data);
+    virtual bool addMessage(FrameBuf* data);
+    virtual bool addMessage(std::shared_ptr<std::vector<BoxBuf>>* data);
 
   protected:
     Encoder() = delete;
@@ -139,7 +142,7 @@ class Encoder : public Base, Base::Listener {
     Differ differ_tot_;
 
     std::timed_mutex targets_lock_;
-    std::shared_ptr<std::vector<Base::Listener::BoxBuf>> targets_;
+    std::shared_ptr<std::vector<BoxBuf>> targets_;
 
     const unsigned int thickness_ = 4;
 

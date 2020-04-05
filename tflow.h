@@ -28,6 +28,7 @@
 #include <future>
 
 #include "utils.h"
+#include "listener.h"
 #include "base.h"
 #include "encoder.h"
 
@@ -112,7 +113,7 @@ void resize(T* out, uint8_t* in,
   }
 }
 
-class Tflow : public Base, Base::Listener {
+class Tflow : public Base, Listener<FrameBuf> {
   public:
     static std::unique_ptr<Tflow> create(unsigned int yield_time, bool quiet, 
         Encoder* enc, unsigned int width, unsigned int height, const char* model,
@@ -120,7 +121,7 @@ class Tflow : public Base, Base::Listener {
     virtual ~Tflow();
 
   public:
-    virtual bool addMessage(Base::Listener::Message msg, void* data);
+    virtual bool addMessage(FrameBuf* data);
 
   protected:
     Tflow() = delete;
@@ -148,8 +149,8 @@ class Tflow : public Base, Base::Listener {
 
     std::string labels_fname_;
     std::vector<std::string> labels_;
-    std::vector<std::pair<unsigned int,Base::Listener::BoxBuf::Type>> labels_pairs_;
-    bool addLabel(const char* label, Base::Listener::BoxBuf::Type type);
+    std::vector<std::pair<unsigned int, BoxBuf::Type>> labels_pairs_;
+    bool addLabel(const char* label, BoxBuf::Type type);
 
     class Frame {
       public:
@@ -177,7 +178,7 @@ class Tflow : public Base, Base::Listener {
     bool prep();
     bool eval();
     bool post(bool report);
-    const char* boxBufTypeStr(Base::Listener::BoxBuf::Type t);
+    const char* boxBufTypeStr(BoxBuf::Type t);
     bool oneRun(bool report);
 
     std::timed_mutex tflow_lock_;

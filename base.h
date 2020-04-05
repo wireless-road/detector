@@ -65,62 +65,6 @@ class Base {
     virtual ~Base();
 
   public:
-    class Listener {
-      public:
-        Listener() {};
-        virtual ~Listener() {}
-      public:
-        enum class Message {
-          kFrameBuf = 0,
-          kBoxBuf,      // sent as shared pointer to vector of BoxBuf
-          kNalBuf
-        };  
-        class FrameBuf {
-          public:
-            FrameBuf() : id(0), length(0), addr(nullptr) {}
-            ~FrameBuf() {}
-          public:
-            unsigned int id;
-            unsigned int length;
-            unsigned char* addr;
-        };        
-        class BoxBuf {
-          public:
-            enum class Type {
-              kUnknown = 0,
-              kPerson,
-              kPet,
-              kVehicle
-            };
-          public: 
-            BoxBuf() = delete;
-            BoxBuf(BoxBuf::Type t, unsigned int i, unsigned int left, 
-                unsigned int top, unsigned int width, unsigned int height) 
-              : type(t), id(i), x(left), y(top), w(width), h(height) {}
-            BoxBuf(BoxBuf const & b) = default;
-            ~BoxBuf() {}
-          public:
-            BoxBuf::Type type;
-            unsigned int id;
-            unsigned int x, y, w, h;
-        };
-        class NalBuf {
-          public:
-            NalBuf() = delete;
-            NalBuf(unsigned int l, unsigned char* a) 
-              : length(l), addr(a) {}
-            NalBuf(NalBuf const & n) = delete;
-            ~NalBuf() {}
-          public:
-            unsigned int length;
-            unsigned char* addr;
-        };
-      public:
-        const unsigned int timeout_ = {1000};
-        virtual bool addMessage(Message msg, void* data) = 0;
-    };
-
-  public:
     enum class State {
       kWaitingToStop,
       kStopped,

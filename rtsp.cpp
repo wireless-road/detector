@@ -89,16 +89,11 @@ bool Rtsp::init(bool quiet, unsigned int bitrate, unsigned int framerate,
   return true; 
 }
 
-bool Rtsp::addMessage(Base::Listener::Message msg, void* data) {
-
-  if (msg != Base::Listener::Message::kNalBuf) {
-    dbgMsg("rtsp message not recognized\n");
-    return false;
-  }
+bool Rtsp::addMessage(NalBuf* nal) {
 
   std::unique_lock<std::timed_mutex> lck(nal_lock_, std::defer_lock);
 
-  if (!lck.try_lock_for(std::chrono::microseconds(Base::Listener::timeout_))) {
+  if (!lck.try_lock_for(std::chrono::microseconds(Listener::timeout_))) {
     dbgMsg("rtsp nal lock busy\n");
     return false;
   }
@@ -113,8 +108,6 @@ bool Rtsp::addMessage(Base::Listener::Message msg, void* data) {
     rtsp_nal = nal_pool_.front();
     nal_pool_.pop_front();
   }
-
-  auto nal = static_cast<Base::Listener::NalBuf*>(data);
 
   if (nal->length > rtsp_nal->nal.size()) {
     dbgMsg("--------------------------resize nal: sz=%d\n", nal->length);
@@ -311,7 +304,7 @@ bool Rtsp::running() {
   if (rtsp_on_) {
     env_->taskScheduler().triggerEvent(live_src_->evt_id_, live_src_);
 //    std::unique_lock<std::timed_mutex> lck(nal_lock_, std::defer_lock);
-//    if (lck.try_lock_for(std::chrono::microseconds(Base::Listener::timeout_))) {
+//    if (lck.try_lock_for(std::chrono::microseconds(Listener::timeout_))) {
 //      if (nal_work_.size() != 0) {
 //        env_->taskScheduler().triggerEvent(live_src_->evt_id_, live_src_);
 //        std::this_thread::sleep_for(std::chrono::microseconds(100));
