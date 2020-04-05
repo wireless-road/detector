@@ -68,52 +68,52 @@ bool Encoder::init(bool quiet, Rtsp* rtsp, unsigned int framerate,
   return true; 
 }
 
-bool Encoder::addMessage(Base::Listener::Message msg, void* data) {
+bool Encoder::addMessage(FrameBuf* data) {
 
-  if (msg != Base::Listener::Message::kFrameBuf &&
-      msg != Base::Listener::Message::kBoxBuf) {
-    dbgMsg("encoder message not recognized\n");
+  std::unique_lock<std::timed_mutex> lck(frame_lock_, std::defer_lock);
+
+  if (!lck.try_lock_for(std::chrono::microseconds(Listener<FrameBuf>::timeout_))) {
+    dbgMsg("encoder frame lock busy\n");
     return false;
   }
 
-  if (msg == Base::Listener::Message::kFrameBuf) {
-    std::unique_lock<std::timed_mutex> lck(frame_lock_, std::defer_lock);
-
-    if (!lck.try_lock_for(std::chrono::microseconds(Base::Listener::timeout_))) {
-      dbgMsg("encoder frame lock busy\n");
-      return false;
-    }
-
-    if (frame_pool_.size() == 0) {
-      dbgMsg("no encoder buffers available\n");
-      return false;
-    }
-
-    auto buf = static_cast<Base::Listener::FrameBuf*>(data);
-    if (frame_len_ != buf->length) {
-      dbgMsg("encoder buffer size mismatch\n");
-      return false;
-    }
-
-    differ_copy_.begin();
-    auto frame = frame_pool_.front();
-    frame_pool_.pop();
-    frame->id = buf->id;
-    frame->length = buf->length;
-    std::memcpy(frame->buf.data(), buf->addr, buf->length);
-    frame_work_.push(frame);
-    differ_copy_.end();
-
-  } else if (msg == Base::Listener::Message::kBoxBuf) {
-    std::unique_lock<std::timed_mutex> lck(targets_lock_, std::defer_lock);
-
-    if (!lck.try_lock_for(std::chrono::microseconds(Base::Listener::timeout_))) {
-      dbgMsg("encoder target lock busy\n");
-      return false;
-    }
-
-    targets_ = *(static_cast<std::shared_ptr<std::vector<Base::Listener::BoxBuf>>*>(data));
+  if (frame_pool_.size() == 0) {
+    dbgMsg("no encoder buffers available\n");
+    return false;
   }
+
+  if (frame_len_ != data->length) {
+    dbgMsg("encoder buffer size mismatch\n");
+    return false;
+  }
+
+  differ_copy_.begin();
+  auto frame = frame_pool_.front();
+  frame_pool_.pop();
+  frame->id = data->id;
+  frame->length = data->length;
+  std::memcpy(frame->buf.data(), data->addr, data->length);
+  frame_work_.push(frame);
+  differ_copy_.end();
+
+  return true;
+}
+
+bool Encoder::addMessage(std::shared_ptr<std::vector<BoxBuf>>* data) {
+
+  std::unique_lock<std::timed_mutex> lck(targets_lock_, std::defer_lock);
+
+  if (!lck.try_lock_for(
+        std::chrono::microseconds(
+          Listener<std::shared_ptr<std::vector<BoxBuf>>>::timeout_
+        )
+    )
+  ) {
+    dbgMsg("encoder target lock busy\n");
+    return false;
+  }
+
+  targets_ = *data;
 
   return true;
 }
@@ -416,13 +416,13 @@ void Encoder::overlay(std::shared_ptr<Encoder::Frame> frame) {
   if (targets_ != nullptr) {
     if (targets_->size() != 0) {
       std::for_each(targets_->begin(), targets_->end(),
-          [=](Base::Listener::BoxBuf const & box) {
+          [=](BoxBuf const & box) {
           Encoder::RGB rgb;
-            if (box.type == Base::Listener::BoxBuf::Type::kPerson) {
+            if (box.type == BoxBuf::Type::kPerson) {
               rgb = red_rgb_;
-            } else if (box.type == Base::Listener::BoxBuf::Type::kPet) {
+            } else if (box.type == BoxBuf::Type::kPet) {
               rgb = green_rgb_;
-            } else if (box.type == Base::Listener::BoxBuf::Type::kVehicle) {
+            } else if (box.type == BoxBuf::Type::kVehicle) {
               rgb = blue_rgb_;
             } else {
               rgb = gray_rgb_;
@@ -431,7 +431,8 @@ void Encoder::overlay(std::shared_ptr<Encoder::Frame> frame) {
                 width_, height_,
                 box.x, box.y, box.w, box.h,
                 rgb.r, rgb.g, rgb.b);
-          });
+          }
+      );
     }
   }
 }
@@ -486,8 +487,8 @@ bool Encoder::running() {
 
         // stream the h264
         if (rtsp_) {
-          Base::Listener::NalBuf nal(omx_buf_out_->nFilledLen, omx_buf_out_->pBuffer);
-          if (!rtsp_->addMessage(Base::Listener::Message::kNalBuf, &nal)) {
+          NalBuf nal(omx_buf_out_->nFilledLen, omx_buf_out_->pBuffer);
+          if (!rtsp_->addMessage(&nal)) {
             dbgMsg("warning: rtsp is busy\n");
           }
         }

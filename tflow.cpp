@@ -66,30 +66,24 @@ bool Tflow::init(bool quiet, Encoder* enc, unsigned int width,
   return true; 
 }
 
-bool Tflow::addMessage(Base::Listener::Message msg, void* data) {
-
-  if (msg != Base::Listener::Message::kFrameBuf) {
-    dbgMsg("tflow message not recognized\n");
-    return false;
-  }
+bool Tflow::addMessage(FrameBuf* data) {
 
   std::unique_lock<std::timed_mutex> lck(tflow_lock_, std::defer_lock);
 
-  if (!lck.try_lock_for(std::chrono::microseconds(Base::Listener::timeout_))) {
+  if (!lck.try_lock_for(std::chrono::microseconds(Listener::timeout_))) {
 //    dbgMsg("tflow busy\n");
     return false;
   }
 
   if (tflow_empty_) {
-    auto buf = static_cast<Base::Listener::FrameBuf*>(data);
-    if (frame_len_ != buf->length) {
+    if (frame_len_ != data->length) {
       dbgMsg("tflow buffer size mismatch\n");
       return false;
     }
     differ_copy_.begin();
-    frame_.id = buf->id;
-    frame_.length = buf->length;
-    std::memcpy(frame_.buf.data(), buf->addr, buf->length);
+    frame_.id = data->id;
+    frame_.length = data->length;
+    std::memcpy(frame_.buf.data(), data->addr, data->length);
     tflow_empty_ = false;
     differ_copy_.end();
   }
@@ -97,7 +91,7 @@ bool Tflow::addMessage(Base::Listener::Message msg, void* data) {
   return true;
 }
 
-bool Tflow::addLabel(const char* label, Base::Listener::BoxBuf::Type type) {
+bool Tflow::addLabel(const char* label, BoxBuf::Type type) {
 
   auto it = std::find_if(labels_.begin(), labels_.end(), 
       [&](const std::string& str) 
@@ -105,7 +99,7 @@ bool Tflow::addLabel(const char* label, Base::Listener::BoxBuf::Type type) {
 
   if (it != labels_.end()) {
     labels_pairs_.emplace_back(
-        std::pair<unsigned int,Base::Listener::BoxBuf::Type>(it - labels_.begin(), type));
+        std::pair<unsigned int, BoxBuf::Type>(it - labels_.begin(), type));
   }
   return true;
 }
@@ -152,18 +146,18 @@ bool Tflow::waitingToRun() {
         labels_.emplace_back(line);
       }
     }
-    addLabel("person",     Base::Listener::BoxBuf::Type::kPerson);
-    addLabel("cat",        Base::Listener::BoxBuf::Type::kPet);
-    addLabel("dog",        Base::Listener::BoxBuf::Type::kPet);
-    addLabel("car",        Base::Listener::BoxBuf::Type::kVehicle);
-    addLabel("bus",        Base::Listener::BoxBuf::Type::kVehicle);
-    addLabel("truck",      Base::Listener::BoxBuf::Type::kVehicle);
-    addLabel("bicycle",    Base::Listener::BoxBuf::Type::kVehicle);
-    addLabel("motorcycle", Base::Listener::BoxBuf::Type::kVehicle);
+    addLabel("person",     BoxBuf::Type::kPerson);
+    addLabel("cat",        BoxBuf::Type::kPet);
+    addLabel("dog",        BoxBuf::Type::kPet);
+    addLabel("car",        BoxBuf::Type::kVehicle);
+    addLabel("bus",        BoxBuf::Type::kVehicle);
+    addLabel("truck",      BoxBuf::Type::kVehicle);
+    addLabel("bicycle",    BoxBuf::Type::kVehicle);
+    addLabel("motorcycle", BoxBuf::Type::kVehicle);
 
 #ifdef DEBUG_MESSAGES
     std::for_each(labels_pairs_.begin(), labels_pairs_.end(),
-        [&](const std::pair<unsigned int,Base::Listener::BoxBuf::Type>& pr) {
+        [&](const std::pair<unsigned int, BoxBuf::Type>& pr) {
           dbgMsg("label pair: %d = %s\n", pr.first, boxBufTypeStr(pr.second));
         });
 #endif
@@ -244,8 +238,8 @@ bool Tflow::post(bool report) {
 
   differ_post_.begin();
   
-  auto boxes = std::shared_ptr<std::vector<Base::Listener::BoxBuf>>(
-        new std::vector<Base::Listener::BoxBuf>);
+  auto boxes = std::shared_ptr<std::vector<BoxBuf>>(
+        new std::vector<BoxBuf>);
 
   const std::vector<int>& res = interpreter_->outputs();
   float* locs = tflite::GetTensorData<float>(interpreter_->tensor(res[0]));
@@ -272,11 +266,11 @@ bool Tflow::post(bool report) {
           if (left < right) {
 
             auto it = std::find_if(labels_pairs_.begin(), labels_pairs_.end(),
-                [&](const std::pair<unsigned int,Base::Listener::BoxBuf::Type>& pr) {
+                [&](const std::pair<unsigned int, BoxBuf::Type>& pr) {
                   return pr.first == class_id;
                 });
 
-            auto btype = Base::Listener::BoxBuf::Type::kUnknown;
+            auto btype = BoxBuf::Type::kUnknown;
             if (it != labels_pairs_.end()) {
               btype = (*it).second;
             }
@@ -298,7 +292,7 @@ bool Tflow::post(bool report) {
             unsigned int width_uint  = right_uint  - left_uint;
             unsigned int height_uint = bottom_uint - top_uint;
 
-            boxes->push_back(Base::Listener::BoxBuf(
+            boxes->push_back(BoxBuf(
                 btype, frame_.id, left_uint, top_uint, width_uint, height_uint));
           }
         }
@@ -309,7 +303,7 @@ bool Tflow::post(bool report) {
   // send boxes if new
   if (enc_) {
     if (post_id_ <= frame_.id) {
-      if (!enc_->addMessage(Base::Listener::Message::kBoxBuf, &boxes)) {
+      if (!enc_->addMessage(&boxes)) {
         dbgMsg("xnor target encoder busy\n");
       }
       post_id_ = frame_.id;
@@ -320,12 +314,12 @@ bool Tflow::post(bool report) {
   return true;
 }
 
-const char* Tflow::boxBufTypeStr(Base::Listener::BoxBuf::Type t) {
+const char* Tflow::boxBufTypeStr(BoxBuf::Type t) {
   switch (t) {
-    case Base::Listener::BoxBuf::Type::kUnknown: return "unknown";
-    case Base::Listener::BoxBuf::Type::kPerson:  return "person";
-    case Base::Listener::BoxBuf::Type::kPet:     return "pet";
-    case Base::Listener::BoxBuf::Type::kVehicle: return "vehicle";
+    case BoxBuf::Type::kUnknown: return "unknown";
+    case BoxBuf::Type::kPerson:  return "person";
+    case BoxBuf::Type::kPet:     return "pet";
+    case BoxBuf::Type::kVehicle: return "vehicle";
   }
   return "unknown";
 }

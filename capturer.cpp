@@ -374,7 +374,7 @@ bool Capturer::running() {
       // send frame to tflow
       if (tfl_) {
         differ_tfl_.begin();
-        if (!tfl_->addMessage(Base::Listener::Message::kFrameBuf, &framebuf_pool_[buf.index])) {
+        if (!tfl_->addMessage(&framebuf_pool_[buf.index])) {
 //          dbgMsg("warning: tflow is busy\n");
         }
         differ_tfl_.end();
@@ -383,7 +383,7 @@ bool Capturer::running() {
       // send frame to encoder
       if (enc_) {
         differ_enc_.begin();
-        if (!enc_->addMessage(Base::Listener::Message::kFrameBuf, &framebuf_pool_[buf.index])) {
+        if (!enc_->addMessage(&framebuf_pool_[buf.index])) {
 //          dbgMsg("warning: encoder is busy\n");
         }
         differ_enc_.end();
