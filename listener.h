@@ -87,7 +87,7 @@ class Listener {
 
   public:
     const unsigned int timeout_ = {1000};
-    virtual bool addMessage(T* data) = 0;
+    virtual bool addMessage(T& data) = 0;
 };
 
 } // namespace detector

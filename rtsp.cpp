@@ -89,7 +89,7 @@ bool Rtsp::init(bool quiet, unsigned int bitrate, unsigned int framerate,
   return true; 
 }
 
-bool Rtsp::addMessage(NalBuf* nal) {
+bool Rtsp::addMessage(NalBuf& nal) {
 
   std::unique_lock<std::timed_mutex> lck(nal_lock_, std::defer_lock);
 
@@ -109,12 +109,12 @@ bool Rtsp::addMessage(NalBuf* nal) {
     nal_pool_.pop_front();
   }
 
-  if (nal->length > rtsp_nal->nal.size()) {
+  if (nal.length > rtsp_nal->nal.size()) {
     dbgMsg("--------------------------resize nal: sz=%d\n", nal->length);
-    rtsp_nal->nal.resize(nal->length, 0);
+    rtsp_nal->nal.resize(nal.length, 0);
   }
-  std::memcpy(rtsp_nal->nal.data(), nal->addr, nal->length);
-  rtsp_nal->length = nal->length;
+  std::memcpy(rtsp_nal->nal.data(), nal.addr, nal.length);
+  rtsp_nal->length = nal.length;
 
   nal_work_.push_back(rtsp_nal);
 

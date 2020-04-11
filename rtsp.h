@@ -69,7 +69,7 @@ class Rtsp : public Base, Listener<NalBuf> {
     virtual ~Rtsp();
 
   public:
-    virtual bool addMessage(NalBuf* data);
+    virtual bool addMessage(NalBuf& data);
 
   protected:
     Rtsp() = delete;

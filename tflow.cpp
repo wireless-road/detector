@@ -66,7 +66,7 @@ bool Tflow::init(bool quiet, Encoder* enc, unsigned int width,
   return true; 
 }
 
-bool Tflow::addMessage(FrameBuf* data) {
+bool Tflow::addMessage(FrameBuf& fbuf) {
 
   std::unique_lock<std::timed_mutex> lck(tflow_lock_, std::defer_lock);
 
@@ -76,14 +76,14 @@ bool Tflow::addMessage(FrameBuf* data) {
   }
 
   if (tflow_empty_) {
-    if (frame_len_ != data->length) {
+    if (frame_len_ != fbuf.length) {
       dbgMsg("tflow buffer size mismatch\n");
       return false;
     }
     differ_copy_.begin();
-    frame_.id = data->id;
-    frame_.length = data->length;
-    std::memcpy(frame_.buf.data(), data->addr, data->length);
+    frame_.id = fbuf.id;
+    frame_.length = fbuf.length;
+    std::memcpy(frame_.buf.data(), fbuf.addr, fbuf.length);
     tflow_empty_ = false;
     differ_copy_.end();
   }
@@ -291,7 +291,7 @@ bool Tflow::post(bool report) {
   // send boxes if new
   if (enc_) {
     if (post_id_ <= frame_.id) {
-      if (!enc_->addMessage(&boxes)) {
+      if (!enc_->addMessage(boxes)) {
         dbgMsg("xnor target encoder busy\n");
       }
       post_id_ = frame_.id;

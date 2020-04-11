@@ -68,7 +68,7 @@ bool Encoder::init(bool quiet, Rtsp* rtsp, unsigned int framerate,
   return true; 
 }
 
-bool Encoder::addMessage(FrameBuf* data) {
+bool Encoder::addMessage(FrameBuf& fbuf) {
 
   std::unique_lock<std::timed_mutex> lck(frame_lock_, std::defer_lock);
 
@@ -82,7 +82,7 @@ bool Encoder::addMessage(FrameBuf* data) {
     return false;
   }
 
-  if (frame_len_ != data->length) {
+  if (frame_len_ != fbuf.length) {
     dbgMsg("encoder buffer size mismatch\n");
     return false;
   }
@@ -90,30 +90,26 @@ bool Encoder::addMessage(FrameBuf* data) {
   differ_copy_.begin();
   auto frame = frame_pool_.front();
   frame_pool_.pop();
-  frame->id = data->id;
-  frame->length = data->length;
-  std::memcpy(frame->buf.data(), data->addr, data->length);
+  frame->id = fbuf.id;
+  frame->length = fbuf.length;
+  std::memcpy(frame->buf.data(), fbuf.addr, fbuf.length);
   frame_work_.push(frame);
   differ_copy_.end();
 
   return true;
 }
 
-bool Encoder::addMessage(std::shared_ptr<std::vector<BoxBuf>>* data) {
+bool Encoder::addMessage(std::shared_ptr<std::vector<BoxBuf>>& boxes) {
 
   std::unique_lock<std::timed_mutex> lck(targets_lock_, std::defer_lock);
 
   if (!lck.try_lock_for(
-        std::chrono::microseconds(
-          Listener<std::shared_ptr<std::vector<BoxBuf>>>::timeout_
-        )
-    )
-  ) {
+        std::chrono::microseconds(Listener<std::shared_ptr<std::vector<BoxBuf>>>::timeout_))) {
     dbgMsg("encoder target lock busy\n");
     return false;
   }
 
-  targets_ = *data;
+  targets_ = boxes;
 
   return true;
 }
@@ -488,7 +484,7 @@ bool Encoder::running() {
         // stream the h264
         if (rtsp_) {
           NalBuf nal(omx_buf_out_->nFilledLen, omx_buf_out_->pBuffer);
-          if (!rtsp_->addMessage(&nal)) {
+          if (!rtsp_->addMessage(nal)) {
             dbgMsg("warning: rtsp is busy\n");
           }
         }

@@ -121,7 +121,7 @@ class Tflow : public Base, Listener<FrameBuf> {
     virtual ~Tflow();
 
   public:
-    virtual bool addMessage(FrameBuf* data);
+    virtual bool addMessage(FrameBuf& data);
 
   protected:
     Tflow() = delete;
