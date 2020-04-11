@@ -43,7 +43,8 @@ INCLUDES = \
 	-I$(LIVE555)/BasicUsageEnvironment/include \
 	-I$(LIVE555)/groupsock/include \
 	-I$(TFLOWSDK) \
-	-I$(TFLOWSDK)/tensorflow/lite/tools/make/downloads/flatbuffers/include
+	-I$(TFLOWSDK)/tensorflow/lite/tools/make/downloads/flatbuffers/include \
+	-I$(TFLOWSDK)/tensorflow/lite/tools/make/downloads/absl
 
 
 $(EXE): $(OBJ)
