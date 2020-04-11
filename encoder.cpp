@@ -184,7 +184,7 @@ void Encoder::blockOnPortChange(OMX_U32 idx, OMX_BOOL enable) {
       dbgMsg("failed block port\n");
     }
     if (port_def.bEnabled != enable) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
   }
 }
@@ -195,7 +195,7 @@ void Encoder::blockOnStateChange(OMX_STATETYPE state) {
   while (i++ == 0 || s != state) {
     OMX_GetState(omx_hnd_, &s);
     if (s != state) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
   }
 }

@@ -166,7 +166,7 @@ int main(int argc, char** argv) {
   }
   enc = Encoder::create(yield_time, quiet, rtsp.get(), framerate, 
       std::abs(wdth), std::abs(hght), bitrate, output, testtime);
-  tfl = Tflow::create(50 * yield_time, quiet, enc.get(), std::abs(wdth), 
+  tfl = Tflow::create(yield_time, quiet, enc.get(), std::abs(wdth), 
       std::abs(hght), model.c_str(), labels.c_str(), threads, threshold);
   cap = Capturer::create(yield_time, quiet, enc.get(), tfl.get(), 
       device, framerate, wdth, hght);

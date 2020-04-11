@@ -169,7 +169,7 @@ bool Tflow::prep() {
   int wanted_width = dims->data[2];
   int wanted_channels = dims->data[3];
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  std::this_thread::sleep_for(std::chrono::milliseconds(1));
   switch (interpreter_->tensor(input)->type) {
     case kTfLiteFloat32:
       resize<float>(interpreter_->typed_tensor<float>(input),
@@ -319,15 +319,15 @@ bool Tflow::oneRun(bool report) {
 
     // prepare image
     prep();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
     // evaluate image
     eval();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
     // post image
     post(report);
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
     tflow_empty_ = true;
   }
