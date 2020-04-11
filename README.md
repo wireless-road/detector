@@ -34,7 +34,7 @@ Get Tensorflow, Live555 and Detector like this:
 cd your/workspace/raspbian
 git clone https://gitlab.com:tylerjbrooks/tensorflow.git
 cd tensorflow
-git checkout rpi
+git checkout rpi2.2
 cd ..
 git clone https://gitlab.com:tylerjbrooks/live.git
 git clone https://gitlab.com:tylerjbrooks/detector.git
