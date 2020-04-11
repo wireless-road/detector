@@ -20,7 +20,7 @@ Detector.  The following is how my environment is setup:
 # project directory
 export RASPBIAN=~/your/workspace/raspbian
 # project cross-compiler
-export RASPBIANCROSS=$RASPBIAN/tools/arm-bcm2708/gcc-6-arm-linux-gnueabihf/armv6-rpi-linux-gnueabihf/bin/arm-linux-gnueabihf-
+export RASPBIANCROSS=arm-linux-gnueabihf-
 # OMX libraries for encoding
 export OMXSUPPORT=$RASPBIAN/vc
 # RTSP source location
@@ -34,7 +34,7 @@ Get Tensorflow, Live555 and Detector like this:
 cd your/workspace/raspbian
 git clone https://gitlab.com:tylerjbrooks/tensorflow.git
 cd tensorflow
-git checkout rpi2.2
+git checkout r2.2  #tensorflow release 2.2
 cd ..
 git clone https://gitlab.com:tylerjbrooks/live.git
 git clone https://gitlab.com:tylerjbrooks/detector.git
@@ -43,14 +43,8 @@ git clone https://gitlab.com:tylerjbrooks/detector.git
 
 Get the Raspbian tool chain like this:
 ```
-cd your/workspace/raspbian
-git clone https://github.com/raspberrypi/tools.git
-cd tools/arm-bcm2708
-git clone https://github.com/africanmudking/gcc-6-arm-linux-gnueabihf.git
-cd gcc-6-arm-linux-gnueabihf
-cat armv6-rpi-linux-gnueabihf.tar.xz.parta* > armv6-rpi-linux-gnueabihf.tar.xz
-tar xvJf armv6-rpi-linux-gnueabihf.tar.xz
-cd ../../..
+sudo apt-get install build-essential
+sudo apt-get install g++-arm-linux-gnueabihf
 ```
 
 Get the rpi3b+ VideoCore software by taring up the '/opt/vc' directory on your rpi3b+
@@ -73,7 +67,7 @@ Start by building Tensorflow Lite:
 cd your/workspace/raspbian
 cd tensorflow/tensorflow/lite/tools/make
 ./download_dependencies.sh
-./cross_rpi_lib.sh
+./build_rpi_lib.sh
 ```
 
 Build the RTSP source:
