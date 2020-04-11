@@ -169,17 +169,17 @@ bool Tflow::prep() {
   int wanted_width = dims->data[2];
   int wanted_channels = dims->data[3];
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  std::this_thread::sleep_for(std::chrono::microseconds(yield_time_));
   switch (interpreter_->tensor(input)->type) {
     case kTfLiteFloat32:
       resize<float>(interpreter_->typed_tensor<float>(input),
-          frame_.buf.data(), height_, width_, channels_,
+          frame_.buf.data(), yield_time_, height_, width_, channels_,
           wanted_height, wanted_width, wanted_channels, model_threads_,
           true, 127.5f, 127.5f);
       break;
     case kTfLiteUInt8:
       resize<uint8_t>(interpreter_->typed_tensor<uint8_t>(input),
-          frame_.buf.data(), height_, width_, channels_,
+          frame_.buf.data(), yield_time_, height_, width_, channels_,
           wanted_height, wanted_width, wanted_channels, model_threads_,
           false, 0, 0);
       break;
@@ -319,15 +319,15 @@ bool Tflow::oneRun(bool report) {
 
     // prepare image
     prep();
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    std::this_thread::sleep_for(std::chrono::microseconds(yield_time_));
 
     // evaluate image
     eval();
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    std::this_thread::sleep_for(std::chrono::microseconds(yield_time_));
 
     // post image
     post(report);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    std::this_thread::sleep_for(std::chrono::microseconds(yield_time_));
 
     tflow_empty_ = true;
   }

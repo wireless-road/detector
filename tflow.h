@@ -41,7 +41,7 @@
 namespace detector {
 
 template <class T>
-void resize(T* out, uint8_t* in, 
+void resize(T* out, uint8_t* in, int yield,
     int image_height, int image_width, int image_channels, 
     int wanted_height, int wanted_width, int wanted_channels, 
     int threads, bool is_float, float input_mean, float input_std) {
@@ -98,7 +98,7 @@ void resize(T* out, uint8_t* in,
   interpreter->typed_tensor<int>(1)[0] = wanted_height;
   interpreter->typed_tensor<int>(1)[1] = wanted_width;
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  std::this_thread::sleep_for(std::chrono::microseconds(yield));
   interpreter->Invoke();
 
   auto output = interpreter->typed_tensor<float>(2);
