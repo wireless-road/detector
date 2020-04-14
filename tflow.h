@@ -40,79 +40,6 @@
 
 namespace detector {
 
-template <class T>
-void resize(T* out, uint8_t* in, int yield,
-    int image_height, int image_width, int image_channels, 
-    int wanted_height, int wanted_width, int wanted_channels, 
-    int threads, bool is_float, float input_mean, float input_std) {
-
-  int number_of_pixels = image_height * image_width * image_channels;
-  std::unique_ptr<tflite::Interpreter> interpreter(new tflite::Interpreter);
-
-  interpreter->UseNNAPI(false);
-  interpreter->SetNumThreads(threads);
-  int base_index = 0;
-
-  // two inputs: input and new_sizes
-  interpreter->AddTensors(2, &base_index);
-  // one output
-  interpreter->AddTensors(1, &base_index);
-  // set input and output tensors
-  interpreter->SetInputs({0, 1});
-  interpreter->SetOutputs({2});
-
-  // set parameters of tensors
-  TfLiteQuantizationParams quant;
-  interpreter->SetTensorParametersReadWrite(
-      0, kTfLiteFloat32, "input",
-      {1, image_height, image_width, image_channels}, 
-      quant);
-  interpreter->SetTensorParametersReadWrite(
-      1, kTfLiteInt32, "new_size", 
-      {2}, 
-      quant);
-  interpreter->SetTensorParametersReadWrite(
-      2, kTfLiteFloat32, "output",
-      {1, wanted_height, wanted_width, wanted_channels}, 
-      quant);
-
-  tflite::ops::builtin::BuiltinOpResolver resolver;
-  const TfLiteRegistration* resize_op =
-      resolver.FindOp(tflite::BuiltinOperator_RESIZE_BILINEAR, 1);
-  auto* params = reinterpret_cast<TfLiteResizeBilinearParams*>(
-      malloc(sizeof(TfLiteResizeBilinearParams)));
-  params->align_corners = false;
-  interpreter->AddNodeWithParameters(
-      {0, 1}, {2}, nullptr, 0, params, resize_op, nullptr);
-
-  interpreter->AllocateTensors();
-
-  // fill input image
-  // in[] are integers, cannot do memcpy() directly
-  auto input = interpreter->typed_tensor<float>(0);
-  for (int i = 0; i < number_of_pixels; i++) {
-    input[i] = in[i];
-  }
-
-  // fill new_sizes
-  interpreter->typed_tensor<int>(1)[0] = wanted_height;
-  interpreter->typed_tensor<int>(1)[1] = wanted_width;
-
-  std::this_thread::sleep_for(std::chrono::microseconds(yield));
-  interpreter->Invoke();
-
-  auto output = interpreter->typed_tensor<float>(2);
-  auto output_number_of_pixels = wanted_height * wanted_width * wanted_channels;
-
-  for (int i = 0; i < output_number_of_pixels; i++) {
-    if (is_float) {
-      out[i] = (output[i] - input_mean) / input_std;
-    } else {
-      out[i] = (uint8_t)output[i];
-    }
-  }
-}
-
 class Tflow : public Base, Listener<FrameBuf> {
   public:
     static std::unique_ptr<Tflow> create(unsigned int yield_time, bool quiet, 
@@ -175,6 +102,10 @@ class Tflow : public Base, Listener<FrameBuf> {
 
     unsigned int post_id_ = {0};
     const unsigned int result_num_ = {10};
+    void resize(uint8_t* out, uint8_t* in, int yield,
+      int image_height, int image_width, int image_channels, 
+      int wanted_height, int wanted_width, int wanted_channels, 
+      int threads);
     bool prep();
     bool eval();
     bool post(bool report);
