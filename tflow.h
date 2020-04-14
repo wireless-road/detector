@@ -69,6 +69,9 @@ class Tflow : public Base, Listener<FrameBuf> {
     unsigned int width_;
     unsigned int height_;
     const unsigned int channels_ = {3};
+    unsigned int model_width_;
+    unsigned int model_height_;
+    unsigned int model_channels_;
     float threshold_;
 
     std::string model_fname_;
@@ -93,6 +96,7 @@ class Tflow : public Base, Listener<FrameBuf> {
 
     std::unique_ptr<tflite::FlatBufferModel> model_;
     std::unique_ptr<tflite::Interpreter> interpreter_;
+    std::unique_ptr<tflite::Interpreter> resize_interpreter_;
 
     Differ differ_copy_;
     Differ differ_prep_;
@@ -102,10 +106,11 @@ class Tflow : public Base, Listener<FrameBuf> {
 
     unsigned int post_id_ = {0};
     const unsigned int result_num_ = {10};
-    void resize(uint8_t* out, uint8_t* in, int yield,
+    void resize(std::unique_ptr<tflite::Interpreter>& interpreter,
+      uint8_t* out, uint8_t* in,
       int image_height, int image_width, int image_channels, 
       int wanted_height, int wanted_width, int wanted_channels, 
-      int threads);
+      int yield);
     bool prep();
     bool eval();
     bool post(bool report);

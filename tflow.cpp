@@ -116,6 +116,45 @@ bool Tflow::waitingToRun() {
     builder(&interpreter_);
     interpreter_->UseNNAPI(false);
     interpreter_->SetNumThreads(model_threads_);
+    interpreter_->AllocateTensors();
+    int input = interpreter_->inputs()[0];
+    TfLiteIntArray* dims = interpreter_->tensor(input)->dims;
+    model_height_ = dims->data[1];
+    model_width_ = dims->data[2];
+    model_channels_ = dims->data[3];
+   
+    // make resize interpreter
+    dbgMsg("make resize interpreter\n");
+    resize_interpreter_ = std::make_unique<tflite::Interpreter>();
+    resize_interpreter_->UseNNAPI(false);
+    resize_interpreter_->SetNumThreads(model_threads_);
+    int base_index = 0;
+    resize_interpreter_->AddTensors(2, &base_index);  // two inputs: input and new_sizes
+    resize_interpreter_->AddTensors(1, &base_index);  // one output
+    resize_interpreter_->SetInputs({0, 1});
+    resize_interpreter_->SetOutputs({2});
+    TfLiteQuantizationParams quant;
+    resize_interpreter_->SetTensorParametersReadWrite(
+        0, kTfLiteFloat32, "input",
+        {1, static_cast<int>(height_), static_cast<int>(width_), static_cast<int>(channels_)}, 
+        quant);
+    resize_interpreter_->SetTensorParametersReadWrite(
+        1, kTfLiteInt32, "new_size", 
+        {2}, 
+        quant);
+    resize_interpreter_->SetTensorParametersReadWrite(
+        2, kTfLiteFloat32, "output",
+        {1, model_height_, model_width_, model_channels_}, 
+        quant);
+    tflite::ops::builtin::BuiltinOpResolver resize_resolver;
+    const TfLiteRegistration* resize_op =
+        resize_resolver.FindOp(tflite::BuiltinOperator_RESIZE_BILINEAR, 1);
+    auto* params = reinterpret_cast<TfLiteResizeBilinearParams*>(
+        malloc(sizeof(TfLiteResizeBilinearParams)));
+    params->align_corners = false;
+    resize_interpreter_->AddNodeWithParameters(
+        {0, 1}, {2}, nullptr, 0, params, resize_op, nullptr);
+    resize_interpreter_->AllocateTensors();
 
     // read labels file
     dbgMsg("read labels file\n");
@@ -152,54 +191,15 @@ bool Tflow::waitingToRun() {
   return true;
 }
 
-void Tflow::resize(uint8_t* out, uint8_t* in, int yield,
+void Tflow::resize(std::unique_ptr<tflite::Interpreter>& interpreter,
+    uint8_t* out, uint8_t* in,
     int image_height, int image_width, int image_channels, 
-    int wanted_height, int wanted_width, int wanted_channels, 
-    int threads) {
-
-  int number_of_pixels = image_height * image_width * image_channels;
-  std::unique_ptr<tflite::Interpreter> interpreter(new tflite::Interpreter);
-
-  interpreter->UseNNAPI(false);
-  interpreter->SetNumThreads(threads);
-  int base_index = 0;
-
-  // two inputs: input and new_sizes
-  interpreter->AddTensors(2, &base_index);
-  // one output
-  interpreter->AddTensors(1, &base_index);
-  // set input and output tensors
-  interpreter->SetInputs({0, 1});
-  interpreter->SetOutputs({2});
-
-  // set parameters of tensors
-  TfLiteQuantizationParams quant;
-  interpreter->SetTensorParametersReadWrite(
-      0, kTfLiteFloat32, "input",
-      {1, image_height, image_width, image_channels}, 
-      quant);
-  interpreter->SetTensorParametersReadWrite(
-      1, kTfLiteInt32, "new_size", 
-      {2}, 
-      quant);
-  interpreter->SetTensorParametersReadWrite(
-      2, kTfLiteFloat32, "output",
-      {1, wanted_height, wanted_width, wanted_channels}, 
-      quant);
-
-  tflite::ops::builtin::BuiltinOpResolver resolver;
-  const TfLiteRegistration* resize_op =
-      resolver.FindOp(tflite::BuiltinOperator_RESIZE_BILINEAR, 1);
-  auto* params = reinterpret_cast<TfLiteResizeBilinearParams*>(
-      malloc(sizeof(TfLiteResizeBilinearParams)));
-  params->align_corners = false;
-  interpreter->AddNodeWithParameters(
-      {0, 1}, {2}, nullptr, 0, params, resize_op, nullptr);
-
-  interpreter->AllocateTensors();
+    int wanted_height, int wanted_width, int wanted_channels,
+    int yield) {
 
   // fill input image
   // in[] are integers, cannot do memcpy() directly
+  int number_of_pixels = image_height * image_width * image_channels;
   auto input = interpreter->typed_tensor<float>(0);
   for (int i = 0; i < number_of_pixels; i++) {
     input[i] = in[i];
@@ -223,25 +223,14 @@ void Tflow::resize(uint8_t* out, uint8_t* in, int yield,
 bool Tflow::prep() {
 
   differ_prep_.begin();
-  int input = interpreter_->inputs()[0];
-  const std::vector<int> inputs = interpreter_->inputs();
-  const std::vector<int> outputs = interpreter_->outputs();
-
-  if (interpreter_->AllocateTensors() != kTfLiteOk) {
-    dbgMsg("allocatetensors failed\n");
-    return false;
-  }
-
-  TfLiteIntArray* dims = interpreter_->tensor(input)->dims;
-  int wanted_height = dims->data[1];
-  int wanted_width = dims->data[2];
-  int wanted_channels = dims->data[3];
-
   std::this_thread::sleep_for(std::chrono::microseconds(yield_time_));
+  int input = interpreter_->inputs()[0];
   if (interpreter_->tensor(input)->type == kTfLiteUInt8) {
-    resize(interpreter_->typed_tensor<uint8_t>(input),
-        frame_.buf.data(), yield_time_, height_, width_, channels_,
-        wanted_height, wanted_width, wanted_channels, model_threads_);
+    resize(resize_interpreter_,
+        interpreter_->typed_tensor<uint8_t>(input), frame_.buf.data(), 
+        height_, width_, channels_,
+        model_height_, model_width_, model_channels_, 
+        yield_time_);
   } else {
     dbgMsg("unrecognized output\n");
   }
@@ -252,17 +241,17 @@ bool Tflow::prep() {
       counter--;
       if (counter == 0) {
         char buf[100];
-        sprintf(buf, "./frm_%dx%d_resized.rgb24", wanted_width, wanted_height);
+        sprintf(buf, "./frm_%dx%d_resized.rgb24", model_width_, model_height_);
         FILE* fd = fopen(buf, "wb");
         if (fd == nullptr) {
           dbgMsg("failed: open resize frame file\n");
         }
 #ifdef OUTPUT_VARIOUS_BITS_OF_INFO
         dbgMsg("  writing resized - fmt:rgb24 len:%d\n",
-            wanted_height * wanted_width * wanted_channels);
+            model_height_ * model_width_ * model_channels_);
 #endif
         fwrite(interpreter_->typed_tensor<uint8_t>(input), 1, 
-            wanted_height * wanted_width * wanted_channels, fd);
+            model_height_ * model_width_ * model_channels_, fd);
         fclose(fd);
       }
     }
