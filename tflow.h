@@ -32,6 +32,8 @@
 #include "base.h"
 #include "encoder.h"
 
+#include "edgetpu.h"
+
 #include <tensorflow/lite/builtin_op_data.h>
 #include <tensorflow/lite/interpreter.h>
 #include <tensorflow/lite/kernels/register.h>

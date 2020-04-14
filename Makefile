@@ -20,18 +20,21 @@ EXE = detector
 # Turn on 'DEBUG_MESSAGES' to turn on debug messages.
 #FEATURES = -DCAPTURE_ONE_RAW_FRAME -DOUTPUT_VARIOUS_BITS_OF_INFO -DDEBUG_MESSAGES
 
-CFLAGS =-DSTANDALONE -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DTARGET_POSIX -D_LINUX -fPIC -DPIC -D_REENTRANT -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -U_FORTIFY_SOURCE -Wall -g -DHAVE_LIBOPENMAX=2 -DOMX -DOMX_SKIP64BIT -ftree-vectorize -pipe -DUSE_EXTERNAL_OMX -DHAVE_LIBBCM_HOST -DUSE_EXTERNAL_LIBBCM_HOST -DUSE_VCHIQ_ARM -O3 -std=c++17 -march=armv7-a -mfpu=neon-vfpv4 -Wno-psabi $(FEATURES)
+CFLAGS =-DSTANDALONE -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DTARGET_POSIX -D_LINUX -fPIC -DPIC -D_REENTRANT -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -U_FORTIFY_SOURCE -Wall -g -DHAVE_LIBOPENMAX=2 -DOMX -DOMX_SKIP64BIT -ftree-vectorize -pipe -DUSE_EXTERNAL_OMX -DHAVE_LIBBCM_HOST -DUSE_EXTERNAL_LIBBCM_HOST -DUSE_VCHIQ_ARM -std=c++17 -march=armv7-a -mfpu=neon-vfpv4 -Wno-psabi $(FEATURES)
 
 LDFLAGS = \
+	-L. \
 	-L$(OMXSUPPORT)/lib \
 	-L$(LIBYUV) \
 	-L$(LIVE555)/liveMedia \
 	-L$(LIVE555)/UsageEnvironment \
 	-L$(LIVE555)/BasicUsageEnvironment \
 	-L$(LIVE555)/groupsock \
-	-L$(TFLOWSDK)/tensorflow/lite/tools/make/gen/rpi_armv7l/lib
+	-L$(TFLOWSDK)/tensorflow/lite/tools/make/gen/rpi_armv7l/lib \
+	-L$(EDGETPUSDK)/libedgetpu/direct/armv7a
 
 LIBS = -ltensorflow-lite -lliveMedia -lgroupsock -lBasicUsageEnvironment -lUsageEnvironment 
+LIBS += -l:libc.so.6 -l:libudev.so.1 -l:libusb-1.0.so -l:libedgetpu.so.1.0 
 LIBS += -lopenmaxil -lbcm_host -lvcos -lvchiq_arm -lbrcmEGL -lbrcmGLESv2 -lpthread -ldl -lrt -lm
 
 INCLUDES = \
@@ -44,7 +47,9 @@ INCLUDES = \
 	-I$(LIVE555)/groupsock/include \
 	-I$(TFLOWSDK) \
 	-I$(TFLOWSDK)/tensorflow/lite/tools/make/downloads/flatbuffers/include \
-	-I$(TFLOWSDK)/tensorflow/lite/tools/make/downloads/absl
+	-I$(TFLOWSDK)/tensorflow/lite/tools/make/downloads/absl \
+	-I$(EDGETPUSDK) \
+	-I$(EDGETPUSDK)/libedgetpu 
 
 
 $(EXE): $(OBJ)

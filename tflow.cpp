@@ -108,14 +108,34 @@ bool Tflow::waitingToRun() {
 
   if (!tflow_on_) {
 
+    // find tpu
+    dbgMsg("find tpu\n");
+    const auto& available_tpus =
+        edgetpu::EdgeTpuManager::GetSingleton()->EnumerateEdgeTpu();
+//    if (available_tpus.size() < 1) {
+//      std::cerr << "This example requires one Edge TPUs to run." << std::endl;
+//      return 0;
+//    }
+
     // make model and interpreter
     dbgMsg("make model and interpreter\n");
     model_ = tflite::FlatBufferModel::BuildFromFile(model_fname_.c_str());
-    tflite::ops::builtin::BuiltinOpResolver resolver;
-    tflite::InterpreterBuilder builder(*model_, resolver);
-    builder(&interpreter_);
-    interpreter_->UseNNAPI(false);
-    interpreter_->SetNumThreads(model_threads_);
+    std::shared_ptr<edgetpu::EdgeTpuContext> edgetpu_context;
+    if (available_tpus.size()) {
+      edgetpu_context = edgetpu::EdgeTpuManager::GetSingleton()->OpenDevice();
+      tflite::ops::builtin::BuiltinOpResolver resolver;
+      resolver.AddCustom(edgetpu::kCustomOp, edgetpu::RegisterCustomOp());
+      tflite::InterpreterBuilder builder(*model_, resolver);
+      builder(&interpreter_);
+      interpreter_->SetExternalContext(kTfLiteEdgeTpuContext, edgetpu_context.get());
+      interpreter_->SetNumThreads(1);
+    } else {
+      tflite::ops::builtin::BuiltinOpResolver resolver;
+      tflite::InterpreterBuilder builder(*model_, resolver);
+      builder(&interpreter_);
+      interpreter_->UseNNAPI(false);
+      interpreter_->SetNumThreads(model_threads_);
+    }
     interpreter_->AllocateTensors();
     int input = interpreter_->inputs()[0];
     TfLiteIntArray* dims = interpreter_->tensor(input)->dims;
@@ -162,6 +182,13 @@ bool Tflow::waitingToRun() {
     params->align_corners = false;
     resize_interpreter_->AddNodeWithParameters(
         {0, 1}, {2}, nullptr, 0, params, resize_op, nullptr);
+//    if (available_tpus.size()) {
+//      resize_interpreter_->SetExternalContext(kTfLiteEdgeTpuContext, edgetpu_context.get());
+//      resize_interpreter_->SetNumThreads(1);
+//    } else {
+      resize_interpreter_->UseNNAPI(false);
+      resize_interpreter_->SetNumThreads(model_threads_);
+//    }
     resize_interpreter_->AllocateTensors();
 
     // read labels file
