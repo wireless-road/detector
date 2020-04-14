@@ -126,8 +126,6 @@ bool Tflow::waitingToRun() {
     // make resize interpreter
     dbgMsg("make resize interpreter\n");
     resize_interpreter_ = std::make_unique<tflite::Interpreter>();
-    resize_interpreter_->UseNNAPI(false);
-    resize_interpreter_->SetNumThreads(model_threads_);
     int base_index = 0;
     resize_interpreter_->AddTensors(2, &base_index);  // two inputs: input and new_sizes
     resize_interpreter_->AddTensors(1, &base_index);  // one output
@@ -136,7 +134,12 @@ bool Tflow::waitingToRun() {
     TfLiteQuantizationParams quant;
     resize_interpreter_->SetTensorParametersReadWrite(
         0, kTfLiteFloat32, "input",
-        {1, static_cast<int>(height_), static_cast<int>(width_), static_cast<int>(channels_)}, 
+        {
+          1, 
+          static_cast<int>(height_), 
+          static_cast<int>(width_), 
+          static_cast<int>(channels_)
+        }, 
         quant);
     resize_interpreter_->SetTensorParametersReadWrite(
         1, kTfLiteInt32, "new_size", 
@@ -144,7 +147,12 @@ bool Tflow::waitingToRun() {
         quant);
     resize_interpreter_->SetTensorParametersReadWrite(
         2, kTfLiteFloat32, "output",
-        {1, model_height_, model_width_, model_channels_}, 
+        {
+          1, 
+          static_cast<int>(model_height_), 
+          static_cast<int>(model_width_), 
+          static_cast<int>(model_channels_)
+        }, 
         quant);
     tflite::ops::builtin::BuiltinOpResolver resize_resolver;
     const TfLiteRegistration* resize_op =
@@ -209,7 +217,7 @@ void Tflow::resize(std::unique_ptr<tflite::Interpreter>& interpreter,
   interpreter->typed_tensor<int>(1)[0] = wanted_height;
   interpreter->typed_tensor<int>(1)[1] = wanted_width;
 
-  std::this_thread::sleep_for(std::chrono::microseconds(yield));
+//  std::this_thread::sleep_for(std::chrono::microseconds(yield));
   interpreter->Invoke();
 
   auto output = interpreter->typed_tensor<float>(2);
@@ -223,7 +231,7 @@ void Tflow::resize(std::unique_ptr<tflite::Interpreter>& interpreter,
 bool Tflow::prep() {
 
   differ_prep_.begin();
-  std::this_thread::sleep_for(std::chrono::microseconds(yield_time_));
+//  std::this_thread::sleep_for(std::chrono::microseconds(yield_time_));
   int input = interpreter_->inputs()[0];
   if (interpreter_->tensor(input)->type == kTfLiteUInt8) {
     resize(resize_interpreter_,
