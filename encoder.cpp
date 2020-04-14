@@ -63,6 +63,8 @@ bool Encoder::init(bool quiet, Rtsp* rtsp, unsigned int framerate,
   output_ = output;
   testtime_ = testtime;
 
+  fd_enc_ = nullptr;
+
   encode_on_ = false;
 
   return true; 
@@ -207,9 +209,7 @@ bool Encoder::waitingToRun() {
     // create encoded file
     if (testtime_ != 0) {
       dbgMsg("create output file\n");
-      if (output_.empty()) {
-        fd_enc_ = stdout;
-      } else {
+      if (!output_.empty()) {
         fd_enc_ = fopen(output_.c_str(), "wb");
         if (fd_enc_ == nullptr) {
           dbgMsg("failed: create outputfile\n");
@@ -477,7 +477,7 @@ bool Encoder::running() {
         differ_encode_.end();
 
         // record the h264
-        if (testtime_ != 0) {
+        if (testtime_ != 0 && fd_enc_ != nullptr) {
           fwrite(omx_buf_out_->pBuffer, 1, omx_buf_out_->nFilledLen, fd_enc_);
         }
 

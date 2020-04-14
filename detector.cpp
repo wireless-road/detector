@@ -63,7 +63,6 @@ void usage() {
   std::cout << "  (m)odel      = path to model       (default = ./models/detect.tflite)" << std::endl;
   std::cout << "  (l)abels     = path to labels      (default = ./models/labelmap.txt)" << std::endl;
   std::cout << "  output       = output file name"                      << std::endl;
-  std::cout << "               = leave blank for stdout"                << std::endl;
   std::cout << "               = no output if testtime is 0"            << std::endl;
 }
 
@@ -102,7 +101,7 @@ int main(int argc, char** argv) {
 
   // cmd line options
   int c;
-  while((c = getopt(argc, argv, ":qru:t:d:f:w:h:b:y:e:s:m:l:")) != -1) {
+  while((c = getopt(argc, argv, ":qru:t:d:f:w:h:b:y:e:s:m:l:o:")) != -1) {
     switch (c) {
       case 'q': quiet     = true;               break;
       case 'r': streaming = true;               break;
@@ -118,13 +117,11 @@ int main(int argc, char** argv) {
       case 's': threshold = std::stof(optarg);  break;
       case 'm': model     = optarg;             break;
       case 'l': labels    = optarg;             break;
+      case 'o': output    = optarg;             break;
 
       case '?':
       default:  usage(); return 0;
     }
-  }
-  if (optind < argc) {
-    output = argv[optind];
   }
 
   // ctrl-c handler
