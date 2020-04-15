@@ -106,55 +106,50 @@ class Semaphore {
     int cnt_;
 };
 
+template<typename U, typename T>
 class Differ {
   public:
     Differ() 
-      : begin_(), end_(),
-        diff_(0), diff_sum_(0), 
-        cnt_(0),  avg_(0),
-        high_(0), low_(std::numeric_limits<uint64_t>::max()) {
+      : cnt(0),  avg(0),
+        high(0), low(std::numeric_limits<U>::max()),
+        begin_(), end_(),
+        diff_(0), diff_sum_(0) {
     }
     ~Differ() {}
 
-    inline uint64_t toNano(struct timespec& ts) {
-      return ts.tv_sec * (uint64_t)1000000000L + ts.tv_nsec;
-    }
-
     inline void begin() { 
-      struct timespec ts;
-      clock_gettime(CLOCK_REALTIME, &ts);
-      begin_ = toNano(ts);
+      begin_ = std::chrono::steady_clock::now();
     }
 
     inline void end() { 
-      struct timespec ts;
-      clock_gettime(CLOCK_REALTIME, &ts);
-      end_ = toNano(ts);
+      using namespace std::chrono;
 
-      diff_ = end_ - begin_;
+      end_ = steady_clock::now();
+
+      duration<U,T> span = 
+        duration_cast<duration<U,T>>(end_ - begin_);
+
+      diff_ = span.count();
       diff_sum_ += diff_;
 
-      high_ = (high_ < diff_) ? diff_ : high_;
-      low_ = (low_ > diff_) ? diff_ : low_;
+      high= (high< diff_) ? diff_ : high;
+      low = (low > diff_) ? diff_ : low;
 
-      cnt_++;
-      avg_ = diff_sum_ / cnt_;
+      cnt++;
+      avg = diff_sum_ / cnt;
     }
 
-    inline unsigned int getCnt()  { return cnt_; } 
-    inline unsigned int getAvg_usec()  { return (unsigned int)(avg_ / 1000); }
-    inline unsigned int getHigh_usec() { return (unsigned int)(high_ / 1000); }
-    inline unsigned int getLow_usec()  { return (unsigned int)(low_ / 1000); }
+  public:
+    U cnt;
+    U avg;
+    U high;
+    U low;
 
   private:
-    uint64_t begin_;
-    uint64_t end_;
-    uint64_t diff_;
-    uint64_t diff_sum_;
-    int cnt_;
-    uint64_t avg_;
-    uint64_t high_;
-    uint64_t low_;
+    std::chrono::steady_clock::time_point begin_;
+    std::chrono::steady_clock::time_point end_;
+    U diff_;
+    U diff_sum_;
 };
 
 } // namespace detector

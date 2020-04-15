@@ -137,9 +137,9 @@ class Encoder : public Base, Listener<FrameBuf>,
 
     std::atomic<bool> encode_on_;
 
-    Differ differ_copy_;
-    Differ differ_encode_;
-    Differ differ_tot_;
+    Differ<uint32_t,std::micro> differ_copy_;
+    Differ<uint32_t,std::micro> differ_encode_;
+    Differ<uint32_t,std::micro> differ_tot_;
 
     std::timed_mutex targets_lock_;
     std::shared_ptr<std::vector<BoxBuf>> targets_;

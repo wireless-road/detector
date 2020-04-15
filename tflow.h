@@ -97,22 +97,23 @@ class Tflow : public Base, Listener<FrameBuf> {
     Tflow::Frame frame_;
 
     std::unique_ptr<tflite::FlatBufferModel> model_;
-    std::unique_ptr<tflite::Interpreter> interpreter_;
+    std::unique_ptr<tflite::Interpreter> model_interpreter_;
     std::unique_ptr<tflite::Interpreter> resize_interpreter_;
 
-    Differ differ_copy_;
-    Differ differ_prep_;
-    Differ differ_eval_;
-    Differ differ_post_;
-    Differ differ_tot_;
+    Differ<uint32_t,std::micro> differ_copy_;
+    Differ<uint32_t,std::micro> differ_prep_;
+    Differ<uint32_t,std::micro> differ_eval_;
+    Differ<uint32_t,std::micro> differ_post_;
+    Differ<uint32_t,std::micro> differ_tot_;
 
     unsigned int post_id_ = {0};
     const unsigned int result_num_ = {10};
+
     void resize(std::unique_ptr<tflite::Interpreter>& interpreter,
-      uint8_t* out, uint8_t* in,
-      int image_height, int image_width, int image_channels, 
-      int wanted_height, int wanted_width, int wanted_channels, 
-      int yield);
+        uint8_t* out, uint8_t* in,
+        int image_height, int image_width, int image_channels, 
+        int wanted_height, int wanted_width, int wanted_channels, 
+        int yield);
     bool prep();
     bool eval();
     bool post(bool report);

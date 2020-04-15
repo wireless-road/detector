@@ -447,16 +447,16 @@ bool Capturer::waitingToHalt() {
     if (!quiet_) {
       fprintf(stderr, "\n\nCapturer Results...\n");
       fprintf(stderr, "   number of frames captured: %d\n", frame_cnt_); 
-      fprintf(stderr, "   tflow copy time (us): high:%u avg:%u low:%u frames:%d\n", 
-          differ_tfl_.getHigh_usec(), differ_tfl_.getAvg_usec(), 
-          differ_tfl_.getLow_usec(),  differ_tfl_.getCnt());
-      fprintf(stderr, "  encode copy time (us): high:%u avg:%u low:%u frames:%d\n", 
-          differ_enc_.getHigh_usec(), differ_enc_.getAvg_usec(), 
-          differ_enc_.getLow_usec(),  differ_enc_.getCnt());
+      fprintf(stderr, "   tflow copy time (us): high:%u avg:%u low:%u frames%u\n", 
+          differ_tfl_.high, differ_tfl_.avg, 
+          differ_tfl_.low,  differ_tfl_.cnt);
+      fprintf(stderr, "  encode copy time (us): high:%u avg:%u low:%u frames%u\n", 
+          differ_enc_.high, differ_enc_.avg, 
+          differ_enc_.low,  differ_enc_.cnt);
       fprintf(stderr, "        total test time: %f sec\n", 
-          differ_tot_.getAvg_usec() / 1000000.f);
+          differ_tot_.avg / 1000000.f);
       fprintf(stderr, "      frames per second: %f fps\n", 
-          differ_enc_.getCnt() * 1000000.f / differ_tot_.getAvg_usec());
+          differ_enc_.cnt * 1000000.f / differ_tot_.avg);
       fprintf(stderr, "\n");
     }
   }

@@ -112,10 +112,6 @@ bool Tflow::waitingToRun() {
     dbgMsg("find tpu\n");
     const auto& available_tpus =
         edgetpu::EdgeTpuManager::GetSingleton()->EnumerateEdgeTpu();
-//    if (available_tpus.size() < 1) {
-//      std::cerr << "This example requires one Edge TPUs to run." << std::endl;
-//      return 0;
-//    }
 
     // make model and interpreter
     dbgMsg("make model and interpreter\n");
@@ -126,25 +122,27 @@ bool Tflow::waitingToRun() {
       tflite::ops::builtin::BuiltinOpResolver resolver;
       resolver.AddCustom(edgetpu::kCustomOp, edgetpu::RegisterCustomOp());
       tflite::InterpreterBuilder builder(*model_, resolver);
-      builder(&interpreter_);
-      interpreter_->SetExternalContext(kTfLiteEdgeTpuContext, edgetpu_context.get());
-      interpreter_->SetNumThreads(1);
+      builder(&model_interpreter_);
+      model_interpreter_->SetExternalContext(kTfLiteEdgeTpuContext, edgetpu_context.get());
+      model_interpreter_->SetNumThreads(1);
     } else {
       tflite::ops::builtin::BuiltinOpResolver resolver;
       tflite::InterpreterBuilder builder(*model_, resolver);
-      builder(&interpreter_);
-      interpreter_->UseNNAPI(false);
-      interpreter_->SetNumThreads(model_threads_);
+      builder(&model_interpreter_);
+      model_interpreter_->UseNNAPI(false);
+      model_interpreter_->SetNumThreads(model_threads_);
     }
-    interpreter_->AllocateTensors();
-    int input = interpreter_->inputs()[0];
-    TfLiteIntArray* dims = interpreter_->tensor(input)->dims;
+    model_interpreter_->AllocateTensors();
+    int input = model_interpreter_->inputs()[0];
+    const std::vector<int> inputs = model_interpreter_->inputs();
+    const std::vector<int> outputs = model_interpreter_->outputs();
+    TfLiteIntArray* dims = model_interpreter_->tensor(input)->dims;
     model_height_ = dims->data[1];
     model_width_ = dims->data[2];
     model_channels_ = dims->data[3];
-   
+
     // make resize interpreter
-    dbgMsg("make resize interpreter\n");
+    dbgMsg("make model and interpreter\n");
     resize_interpreter_ = std::make_unique<tflite::Interpreter>();
     int base_index = 0;
     resize_interpreter_->AddTensors(2, &base_index);  // two inputs: input and new_sizes
@@ -154,8 +152,7 @@ bool Tflow::waitingToRun() {
     TfLiteQuantizationParams quant;
     resize_interpreter_->SetTensorParametersReadWrite(
         0, kTfLiteFloat32, "input",
-        {
-          1, 
+        {1, 
           static_cast<int>(height_), 
           static_cast<int>(width_), 
           static_cast<int>(channels_)
@@ -167,8 +164,7 @@ bool Tflow::waitingToRun() {
         quant);
     resize_interpreter_->SetTensorParametersReadWrite(
         2, kTfLiteFloat32, "output",
-        {
-          1, 
+        {1, 
           static_cast<int>(model_height_), 
           static_cast<int>(model_width_), 
           static_cast<int>(model_channels_)
@@ -182,13 +178,13 @@ bool Tflow::waitingToRun() {
     params->align_corners = false;
     resize_interpreter_->AddNodeWithParameters(
         {0, 1}, {2}, nullptr, 0, params, resize_op, nullptr);
-//    if (available_tpus.size()) {
-//      resize_interpreter_->SetExternalContext(kTfLiteEdgeTpuContext, edgetpu_context.get());
-//      resize_interpreter_->SetNumThreads(1);
-//    } else {
+    if (available_tpus.size()) {
+      resize_interpreter_->SetExternalContext(kTfLiteEdgeTpuContext, edgetpu_context.get());
+      resize_interpreter_->SetNumThreads(1);
+    } else {
       resize_interpreter_->UseNNAPI(false);
       resize_interpreter_->SetNumThreads(model_threads_);
-//    }
+    }
     resize_interpreter_->AllocateTensors();
 
     // read labels file
@@ -229,12 +225,13 @@ bool Tflow::waitingToRun() {
 void Tflow::resize(std::unique_ptr<tflite::Interpreter>& interpreter,
     uint8_t* out, uint8_t* in,
     int image_height, int image_width, int image_channels, 
-    int wanted_height, int wanted_width, int wanted_channels,
+    int wanted_height, int wanted_width, int wanted_channels, 
     int yield) {
+
+  int number_of_pixels = image_height * image_width * image_channels;
 
   // fill input image
   // in[] are integers, cannot do memcpy() directly
-  int number_of_pixels = image_height * image_width * image_channels;
   auto input = interpreter->typed_tensor<float>(0);
   for (int i = 0; i < number_of_pixels; i++) {
     input[i] = in[i];
@@ -257,12 +254,12 @@ void Tflow::resize(std::unique_ptr<tflite::Interpreter>& interpreter,
 
 bool Tflow::prep() {
 
-  differ_prep_.begin();
 //  std::this_thread::sleep_for(std::chrono::microseconds(yield_time_));
-  int input = interpreter_->inputs()[0];
-  if (interpreter_->tensor(input)->type == kTfLiteUInt8) {
+  differ_prep_.begin();
+  int input = model_interpreter_->inputs()[0];
+  if (model_interpreter_->tensor(input)->type == kTfLiteUInt8) {
     resize(resize_interpreter_,
-        interpreter_->typed_tensor<uint8_t>(input), frame_.buf.data(), 
+        model_interpreter_->typed_tensor<uint8_t>(input), frame_.buf.data(), 
         height_, width_, channels_,
         model_height_, model_width_, model_channels_, 
         yield_time_);
@@ -285,7 +282,7 @@ bool Tflow::prep() {
         dbgMsg("  writing resized - fmt:rgb24 len:%d\n",
             model_height_ * model_width_ * model_channels_);
 #endif
-        fwrite(interpreter_->typed_tensor<uint8_t>(input), 1, 
+        fwrite(model_interpreter_->typed_tensor<uint8_t>(input), 1, 
             model_height_ * model_width_ * model_channels_, fd);
         fclose(fd);
       }
@@ -297,7 +294,7 @@ bool Tflow::prep() {
 
 bool Tflow::eval() {
   differ_eval_.begin();
-  if (interpreter_->Invoke() != kTfLiteOk) {
+  if (model_interpreter_->Invoke() != kTfLiteOk) {
     dbgMsg("failed invoke\n");
   }
   differ_eval_.end();
@@ -311,12 +308,12 @@ bool Tflow::post(bool report) {
   auto boxes = std::shared_ptr<std::vector<BoxBuf>>(
         new std::vector<BoxBuf>);
 
-  const std::vector<int>& res = interpreter_->outputs();
-  float* locs = tflite::GetTensorData<float>(interpreter_->tensor(res[0]));
-  float* clas = tflite::GetTensorData<float>(interpreter_->tensor(res[1]));
-  float* scor = tflite::GetTensorData<float>(interpreter_->tensor(res[2]));
+  const std::vector<int>& res = model_interpreter_->outputs();
+  float* locs = tflite::GetTensorData<float>(model_interpreter_->tensor(res[0]));
+  float* clas = tflite::GetTensorData<float>(model_interpreter_->tensor(res[1]));
+  float* scor = tflite::GetTensorData<float>(model_interpreter_->tensor(res[2]));
 #if DEBUG_MESSAGES
-  float* tot  = tflite::GetTensorData<float>(interpreter_->tensor(res[3]));
+  float* tot  = tflite::GetTensorData<float>(model_interpreter_->tensor(res[3]));
   dbgMsg("total results: %d\n", static_cast<unsigned int>(tot[0]));
 #endif
   for (unsigned int i = 0; i < result_num_; i++, locs += 4) {
@@ -395,7 +392,6 @@ const char* Tflow::boxBufTypeStr(BoxBuf::Type t) {
 }
 
 bool Tflow::oneRun(bool report) {
-  std::unique_lock<std::timed_mutex> lck(tflow_lock_);
 
   if (!tflow_empty_) {
 
@@ -443,22 +439,22 @@ bool Tflow::waitingToHalt() {
     // report
     if (!quiet_) {
       fprintf(stderr, "\nTflow Results...\n");
-      fprintf(stderr, "  image copy time (us): high:%u avg:%u low:%u frames:%d\n", 
-          differ_copy_.getHigh_usec(), differ_copy_.getAvg_usec(), 
-          differ_copy_.getLow_usec(),  differ_copy_.getCnt());
-      fprintf(stderr, "  image prep time (us): high:%u avg:%u low:%u frames:%d\n", 
-          differ_prep_.getHigh_usec(), differ_prep_.getAvg_usec(), 
-          differ_prep_.getLow_usec(),  differ_prep_.getCnt());
-      fprintf(stderr, "  image eval time (us): high:%u avg:%u low:%u frames:%d\n", 
-          differ_eval_.getHigh_usec(), differ_eval_.getAvg_usec(), 
-          differ_eval_.getLow_usec(),  differ_eval_.getCnt());
-      fprintf(stderr, "  image post time (us): high:%u avg:%u low:%u frames:%d\n", 
-          differ_post_.getHigh_usec(), differ_post_.getAvg_usec(), 
-          differ_post_.getLow_usec(),  differ_post_.getCnt());
+      fprintf(stderr, "  image copy time (us): high:%u avg:%u low:%u frames%u\n", 
+          differ_copy_.high, differ_copy_.avg, 
+          differ_copy_.low,  differ_copy_.cnt);
+      fprintf(stderr, "  image prep time (us): high:%u avg:%u low:%u frames%u\n", 
+          differ_prep_.high, differ_prep_.avg, 
+          differ_prep_.low,  differ_prep_.cnt);
+      fprintf(stderr, "  image eval time (us): high:%u avg:%u low:%u frames%u\n", 
+          differ_eval_.high, differ_eval_.avg, 
+          differ_eval_.low,  differ_eval_.cnt);
+      fprintf(stderr, "  image post time (us): high:%u avg:%u low:%u frames%u\n", 
+          differ_post_.high, differ_post_.avg, 
+          differ_post_.low,  differ_post_.cnt);
       fprintf(stderr, "       total test time: %f sec\n", 
-          differ_tot_.getAvg_usec() / 1000000.f);
+          differ_tot_.avg / 1000000.f);
       fprintf(stderr, "     frames per second: %f fps\n", 
-          differ_post_.getCnt() * 1000000.f / differ_tot_.getAvg_usec());
+          differ_post_.cnt * 1000000.f / differ_tot_.avg);
       fprintf(stderr, "\n");
     }
   }

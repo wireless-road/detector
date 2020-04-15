@@ -578,7 +578,7 @@ bool Encoder::waitingToHalt() {
     bcm_host_deinit();
 
     if (testtime_ != 0) {
-      if (fd_enc_ != stdout) {
+      if (fd_enc_ != nullptr) {
         fclose(fd_enc_);
       }
     }
@@ -586,16 +586,16 @@ bool Encoder::waitingToHalt() {
     // report
     if (!quiet_) {
       fprintf(stderr, "\nEncoder Results...\n");
-      fprintf(stderr, "  image copy   time (us): high:%u avg:%u low:%u frames:%d\n", 
-          differ_copy_.getHigh_usec(), differ_copy_.getAvg_usec(), 
-          differ_copy_.getLow_usec(),differ_copy_.getCnt());
-      fprintf(stderr, "  image encode time (us): high:%u avg:%u low:%u frames:%d\n", 
-          differ_encode_.getHigh_usec(), differ_encode_.getAvg_usec(), 
-          differ_encode_.getLow_usec(),differ_encode_.getCnt());
+      fprintf(stderr, "  image copy   time (us): high:%u avg:%u low:%u frames%u\n", 
+          differ_copy_.high, differ_copy_.avg, 
+          differ_copy_.low,differ_copy_.cnt);
+      fprintf(stderr, "  image encode time (us): high:%u avg:%u low:%u frames%u\n", 
+          differ_encode_.high, differ_encode_.avg, 
+          differ_encode_.low,differ_encode_.cnt);
       fprintf(stderr, "         total test time: %f sec\n", 
-          differ_tot_.getAvg_usec() / 1000000.f);
+          differ_tot_.avg / 1000000.f);
       fprintf(stderr, "       frames per second: %f fps\n", 
-          differ_encode_.getCnt() * 1000000.f / differ_tot_.getAvg_usec());
+          differ_encode_.cnt * 1000000.f / differ_tot_.avg);
       fprintf(stderr, "\n");
     }
   }
