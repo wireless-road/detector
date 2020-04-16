@@ -23,7 +23,6 @@ EXE = detector
 CFLAGS =-DSTANDALONE -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DTARGET_POSIX -D_LINUX -fPIC -DPIC -D_REENTRANT -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -U_FORTIFY_SOURCE -Wall -g -DHAVE_LIBOPENMAX=2 -DOMX -DOMX_SKIP64BIT -ftree-vectorize -pipe -DUSE_EXTERNAL_OMX -DHAVE_LIBBCM_HOST -DUSE_EXTERNAL_LIBBCM_HOST -DUSE_VCHIQ_ARM -std=c++17 -march=armv7-a -mfpu=neon-vfpv4 -Wno-psabi $(FEATURES)
 
 LDFLAGS = \
-	-L. \
 	-L$(OMXSUPPORT)/lib \
 	-L$(LIBYUV) \
 	-L$(LIVE555)/liveMedia \
@@ -34,8 +33,12 @@ LDFLAGS = \
 	-L$(EDGETPUSDK)/libedgetpu/direct/armv7a
 
 LIBS = -ltensorflow-lite -lliveMedia -lgroupsock -lBasicUsageEnvironment -lUsageEnvironment 
-LIBS += -l:libc.so.6 -l:libudev.so.1 -l:libusb-1.0.so -l:libedgetpu.so.1.0 
+LIBS += -l:libedgetpu.so.1.0 
 LIBS += -lopenmaxil -lbcm_host -lvcos -lvchiq_arm -lbrcmEGL -lbrcmGLESv2 -lpthread -ldl -lrt -lm
+
+#add these if cross compiling
+#LDFLAGS = -L.
+#LIBS += -l:libc.so.6 -l:libudev.so.1 -l:libusb-1.0.so -l:libedgetpu.so.1.0 
 
 INCLUDES = \
 	-I. \
