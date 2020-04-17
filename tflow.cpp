@@ -116,14 +116,13 @@ bool Tflow::waitingToRun() {
     // make model and interpreter
     dbgMsg("make model and interpreter\n");
     model_ = tflite::FlatBufferModel::BuildFromFile(model_fname_.c_str());
-    std::shared_ptr<edgetpu::EdgeTpuContext> edgetpu_context;
     if (available_tpus.size()) {
-      edgetpu_context = edgetpu::EdgeTpuManager::GetSingleton()->OpenDevice();
+      edgetpu_context_ = edgetpu::EdgeTpuManager::GetSingleton()->OpenDevice();
       tflite::ops::builtin::BuiltinOpResolver resolver;
       resolver.AddCustom(edgetpu::kCustomOp, edgetpu::RegisterCustomOp());
       tflite::InterpreterBuilder builder(*model_, resolver);
       builder(&model_interpreter_);
-      model_interpreter_->SetExternalContext(kTfLiteEdgeTpuContext, edgetpu_context.get());
+      model_interpreter_->SetExternalContext(kTfLiteEdgeTpuContext, edgetpu_context_.get());
       model_interpreter_->SetNumThreads(1);
     } else {
       tflite::ops::builtin::BuiltinOpResolver resolver;
@@ -142,7 +141,7 @@ bool Tflow::waitingToRun() {
     model_channels_ = dims->data[3];
 
     // make resize interpreter
-    dbgMsg("make model and interpreter\n");
+    dbgMsg("make resize interpreter\n");
     resize_interpreter_ = std::make_unique<tflite::Interpreter>();
     int base_index = 0;
     resize_interpreter_->AddTensors(2, &base_index);  // two inputs: input and new_sizes
@@ -179,7 +178,7 @@ bool Tflow::waitingToRun() {
     resize_interpreter_->AddNodeWithParameters(
         {0, 1}, {2}, nullptr, 0, params, resize_op, nullptr);
     if (available_tpus.size()) {
-      resize_interpreter_->SetExternalContext(kTfLiteEdgeTpuContext, edgetpu_context.get());
+      resize_interpreter_->SetExternalContext(kTfLiteEdgeTpuContext, edgetpu_context_.get());
       resize_interpreter_->SetNumThreads(1);
     } else {
       resize_interpreter_->UseNNAPI(false);
@@ -284,6 +283,19 @@ bool Tflow::prep() {
 #endif
         fwrite(model_interpreter_->typed_tensor<uint8_t>(input), 1, 
             model_height_ * model_width_ * model_channels_, fd);
+        fclose(fd);
+
+        sprintf(buf, "./frm_%dx%d_fullsize.rgb24", width_, height_);
+        fd = fopen(buf, "wb");
+        if (fd == nullptr) {
+          dbgMsg("failed: open full frame file\n");
+        }
+#ifdef OUTPUT_VARIOUS_BITS_OF_INFO
+        dbgMsg("  writing fullsize - fmt:rgb24 len:%d\n",
+            height_ * width_ * channels_);
+#endif
+        fwrite(frame_.buf.data(), 1, 
+            height_ * width_ * channels_, fd);
         fclose(fd);
       }
     }

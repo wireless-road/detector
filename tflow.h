@@ -96,6 +96,7 @@ class Tflow : public Base, Listener<FrameBuf> {
     unsigned int frame_len_;
     Tflow::Frame frame_;
 
+    std::shared_ptr<edgetpu::EdgeTpuContext> edgetpu_context_;
     std::unique_ptr<tflite::FlatBufferModel> model_;
     std::unique_ptr<tflite::Interpreter> model_interpreter_;
     std::unique_ptr<tflite::Interpreter> resize_interpreter_;
