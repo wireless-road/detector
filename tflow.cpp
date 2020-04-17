@@ -135,7 +135,7 @@ bool Tflow::waitingToRun() {
     model_channels_ = dims->data[3];
 
     // make resize interpreter
-    dbgMsg("make model and interpreter\n");
+    dbgMsg("make resize interpreter\n");
     resize_interpreter_ = std::make_unique<tflite::Interpreter>();
     int base_index = 0;
     resize_interpreter_->AddTensors(2, &base_index);  // two inputs: input and new_sizes
@@ -270,6 +270,19 @@ bool Tflow::prep() {
 #endif
         fwrite(model_interpreter_->typed_tensor<uint8_t>(input), 1, 
             model_height_ * model_width_ * model_channels_, fd);
+        fclose(fd);
+
+        sprintf(buf, "./frm_%dx%d_fullsize.rgb24", width_, height_);
+        fd = fopen(buf, "wb");
+        if (fd == nullptr) {
+          dbgMsg("failed: open full frame file\n");
+        }
+#ifdef OUTPUT_VARIOUS_BITS_OF_INFO
+        dbgMsg("  writing fullsize - fmt:rgb24 len:%d\n",
+            height_ * width_ * channels_);
+#endif
+        fwrite(frame_.buf.data(), 1, 
+            height_ * width_ * channels_, fd);
         fclose(fd);
       }
     }

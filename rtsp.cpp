@@ -110,7 +110,7 @@ bool Rtsp::addMessage(NalBuf& nal) {
   }
 
   if (nal.length > rtsp_nal->nal.size()) {
-    dbgMsg("--------------------------resize nal: sz=%d\n", nal->length);
+    dbgMsg("--------------------------resize nal: sz=%d\n", nal.length);
     rtsp_nal->nal.resize(nal.length, 0);
   }
   std::memcpy(rtsp_nal->nal.data(), nal.addr, nal.length);
