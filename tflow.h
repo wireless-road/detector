@@ -110,11 +110,11 @@ class Tflow : public Base, Listener<FrameBuf> {
     std::unique_ptr<tflite::Interpreter> model_interpreter_;
     std::unique_ptr<tflite::Interpreter> resize_interpreter_;
 
-    Differ<uint32_t,std::micro> differ_copy_;
-    Differ<uint32_t,std::micro> differ_prep_;
-    Differ<uint32_t,std::micro> differ_eval_;
-    Differ<uint32_t,std::micro> differ_post_;
-    Differ<uint32_t,std::micro> differ_tot_;
+    MicroDiffer<uint32_t> differ_copy_;
+    MicroDiffer<uint32_t> differ_prep_;
+    MicroDiffer<uint32_t> differ_eval_;
+    MicroDiffer<uint32_t> differ_post_;
+    MicroDiffer<uint32_t> differ_tot_;
 
     unsigned int post_id_ = {0};
     const unsigned int result_num_ = {10};

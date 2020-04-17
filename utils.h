@@ -107,15 +107,15 @@ class Semaphore {
 };
 
 template<typename U, typename T>
-class Differ {
+class DifferBase {
   public:
-    Differ() 
+    DifferBase() 
       : cnt(0),  avg(0),
         high(0), low(std::numeric_limits<U>::max()),
         begin_(), end_(),
         diff_(0), diff_sum_(0) {
     }
-    ~Differ() {}
+    ~DifferBase() {}
 
     inline void begin() { 
       begin_ = std::chrono::steady_clock::now();
@@ -123,7 +123,6 @@ class Differ {
 
     inline void end() { 
       using namespace std::chrono;
-
       end_ = steady_clock::now();
 
       duration<U,T> span = 
@@ -132,8 +131,8 @@ class Differ {
       diff_ = span.count();
       diff_sum_ += diff_;
 
-      high= (high< diff_) ? diff_ : high;
-      low = (low > diff_) ? diff_ : low;
+      high= (high < static_cast<U>(diff_)) ? static_cast<U>(diff_) : high;
+      low = (low  > static_cast<U>(diff_)) ? static_cast<U>(diff_) : low;
 
       cnt++;
       avg = diff_sum_ / cnt;
@@ -148,9 +147,21 @@ class Differ {
   private:
     std::chrono::steady_clock::time_point begin_;
     std::chrono::steady_clock::time_point end_;
-    U diff_;
-    U diff_sum_;
+    uint64_t diff_;
+    uint64_t diff_sum_;
 };
+
+template<typename T> class MilliDiffer;
+template<> class MilliDiffer<uint32_t> : public DifferBase<uint32_t,std::milli> {};
+template<> class MilliDiffer<uint64_t> : public DifferBase<uint64_t,std::milli> {};
+
+template<typename T> class MicroDiffer;
+template<> class MicroDiffer<uint32_t> : public DifferBase<uint32_t,std::micro> {};
+template<> class MicroDiffer<uint64_t> : public DifferBase<uint64_t,std::micro> {};
+
+template<typename T> class NanoDiffer;
+template<> class NanoDiffer<uint32_t>  : public DifferBase<uint32_t,std::nano>  {};
+template<> class NanoDiffer<uint64_t>  : public DifferBase<uint64_t,std::nano>  {};
 
 } // namespace detector
 

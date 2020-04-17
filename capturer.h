@@ -81,9 +81,9 @@ class Capturer : public Base {
 
     int xioctl(int fd, int request, void* arg);
 
-    Differ<uint32_t,std::micro> differ_enc_;
-    Differ<uint32_t,std::micro> differ_tfl_;
-    Differ<uint32_t,std::micro> differ_tot_;
+    MicroDiffer<uint32_t> differ_enc_;
+    MicroDiffer<uint32_t> differ_tfl_;
+    MicroDiffer<uint32_t> differ_tot_;
 
 #ifdef CAPTURE_ONE_RAW_FRAME
     const unsigned int capture_cnt_ = {10};
