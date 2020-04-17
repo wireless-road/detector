@@ -107,15 +107,15 @@ class Semaphore {
 };
 
 template<typename U, typename T>
-class DifferBase {
+class Differ {
   public:
-    DifferBase() 
+    Differ() 
       : cnt(0),  avg(0),
         high(0), low(std::numeric_limits<U>::max()),
         begin_(), end_(),
         diff_(0), diff_sum_(0) {
     }
-    ~DifferBase() {}
+    ~Differ() {}
 
     inline void begin() { 
       begin_ = std::chrono::steady_clock::now();
@@ -152,16 +152,16 @@ class DifferBase {
 };
 
 template<typename T> class MilliDiffer;
-template<> class MilliDiffer<uint32_t> : public DifferBase<uint32_t,std::milli> {};
-template<> class MilliDiffer<uint64_t> : public DifferBase<uint64_t,std::milli> {};
+template<> class MilliDiffer<uint32_t> : public Differ<uint32_t,std::milli> {};
+template<> class MilliDiffer<uint64_t> : public Differ<uint64_t,std::milli> {};
 
 template<typename T> class MicroDiffer;
-template<> class MicroDiffer<uint32_t> : public DifferBase<uint32_t,std::micro> {};
-template<> class MicroDiffer<uint64_t> : public DifferBase<uint64_t,std::micro> {};
+template<> class MicroDiffer<uint32_t> : public Differ<uint32_t,std::micro> {};
+template<> class MicroDiffer<uint64_t> : public Differ<uint64_t,std::micro> {};
 
 template<typename T> class NanoDiffer;
-template<> class NanoDiffer<uint32_t>  : public DifferBase<uint32_t,std::nano>  {};
-template<> class NanoDiffer<uint64_t>  : public DifferBase<uint64_t,std::nano>  {};
+template<> class NanoDiffer<uint32_t>  : public Differ<uint32_t,std::nano>  {};
+template<> class NanoDiffer<uint64_t>  : public Differ<uint64_t,std::nano>  {};
 
 } // namespace detector
 
