@@ -17,10 +17,14 @@
  */
 
 #include <chrono>
+#include <vector>
 #include <cstring>
-#include <algorithm>
 #include <iostream>
 #include <fstream>
+#include <string>
+#include <sstream>
+#include <algorithm>
+#include <iterator>
 
 #include "tflow.h"
 
@@ -36,17 +40,19 @@ Tflow::~Tflow() {
 
 std::unique_ptr<Tflow> Tflow::create(unsigned int yield_time, bool quiet, 
     Encoder* enc, unsigned int width, unsigned int height, 
-    const char* model, const char* labels, unsigned int threads, float threshold) {
+    const char* model, const char* labels, unsigned int threads, float threshold, 
+    bool tpu) {
   auto obj = std::unique_ptr<Tflow>(new Tflow(yield_time));
-  obj->init(quiet, enc, width, height, model, labels, threads, threshold);
+  obj->init(quiet, enc, width, height, model, labels, threads, threshold, tpu);
   return obj;
 }
 
 bool Tflow::init(bool quiet, Encoder* enc, unsigned int width, 
     unsigned int height, const char* model, const char* labels, 
-    unsigned int threads, float threshold) {
+    unsigned int threads, float threshold, bool tpu) {
 
   quiet_ = quiet;
+  tpu_ = tpu;
 
   enc_ = enc;
   
@@ -91,19 +97,6 @@ bool Tflow::addMessage(FrameBuf& fbuf) {
   return true;
 }
 
-bool Tflow::addLabel(const char* label, BoxBuf::Type type) {
-
-  auto it = std::find_if(labels_.begin(), labels_.end(), 
-      [&](const std::string& str) 
-      { return str.compare(label) == 0; });
-
-  if (it != labels_.end()) {
-    labels_pairs_.emplace_back(
-        std::pair<unsigned int, BoxBuf::Type>(it - labels_.begin(), type));
-  }
-  return true;
-}
-
 bool Tflow::waitingToRun() {
 
   if (!tflow_on_) {
@@ -115,17 +108,17 @@ bool Tflow::waitingToRun() {
 
     // make model and interpreter
     dbgMsg("make model and interpreter\n");
-    model_ = tflite::FlatBufferModel::BuildFromFile(model_fname_.c_str());
-    std::shared_ptr<edgetpu::EdgeTpuContext> edgetpu_context;
-    if (available_tpus.size()) {
-      edgetpu_context = edgetpu::EdgeTpuManager::GetSingleton()->OpenDevice();
+    if (tpu_ && available_tpus.size()) {
+      model_ = tflite::FlatBufferModel::BuildFromFile(model_fname_.c_str());
+      edgetpu_context_ = edgetpu::EdgeTpuManager::GetSingleton()->OpenDevice();
       tflite::ops::builtin::BuiltinOpResolver resolver;
       resolver.AddCustom(edgetpu::kCustomOp, edgetpu::RegisterCustomOp());
       tflite::InterpreterBuilder builder(*model_, resolver);
       builder(&model_interpreter_);
-      model_interpreter_->SetExternalContext(kTfLiteEdgeTpuContext, edgetpu_context.get());
+      model_interpreter_->SetExternalContext(kTfLiteEdgeTpuContext, edgetpu_context_.get());
       model_interpreter_->SetNumThreads(1);
     } else {
+      model_ = tflite::FlatBufferModel::BuildFromFile(model_fname_.c_str());
       tflite::ops::builtin::BuiltinOpResolver resolver;
       tflite::InterpreterBuilder builder(*model_, resolver);
       builder(&model_interpreter_);
@@ -178,8 +171,8 @@ bool Tflow::waitingToRun() {
     params->align_corners = false;
     resize_interpreter_->AddNodeWithParameters(
         {0, 1}, {2}, nullptr, 0, params, resize_op, nullptr);
-    if (available_tpus.size()) {
-      resize_interpreter_->SetExternalContext(kTfLiteEdgeTpuContext, edgetpu_context.get());
+    if (tpu_ && available_tpus.size()) {
+      resize_interpreter_->SetExternalContext(kTfLiteEdgeTpuContext, edgetpu_context_.get());
       resize_interpreter_->SetNumThreads(1);
     } else {
       resize_interpreter_->UseNNAPI(false);
@@ -195,25 +188,18 @@ bool Tflow::waitingToRun() {
     }
     std::string line;
     while (std::getline(ifs, line)) {
-      if (line.compare("???") != 0) {
-        labels_.emplace_back(line);
+      std::istringstream iss(line);
+      std::vector<std::string> tokens{
+        std::istream_iterator<std::string>{iss},
+        std::istream_iterator<std::string>{}
+      };
+      auto it = boxbuf_pairs_.find(tokens[1]);
+      BoxBuf::Type btype = BoxBuf::Type::kUnknown;
+      if (it != boxbuf_pairs_.end()) {
+        btype = it->second;
       }
+      label_pairs_[std::stoul(tokens[0])] = std::make_pair(tokens[1], btype);
     }
-    addLabel("person",     BoxBuf::Type::kPerson);
-    addLabel("cat",        BoxBuf::Type::kPet);
-    addLabel("dog",        BoxBuf::Type::kPet);
-    addLabel("car",        BoxBuf::Type::kVehicle);
-    addLabel("bus",        BoxBuf::Type::kVehicle);
-    addLabel("truck",      BoxBuf::Type::kVehicle);
-    addLabel("bicycle",    BoxBuf::Type::kVehicle);
-    addLabel("motorcycle", BoxBuf::Type::kVehicle);
-
-#ifdef DEBUG_MESSAGES
-    std::for_each(labels_pairs_.begin(), labels_pairs_.end(),
-        [&](const std::pair<unsigned int, BoxBuf::Type>& pr) {
-          dbgMsg("label pair: %d = %s\n", pr.first, boxBufTypeStr(pr.second));
-        });
-#endif
 
     differ_tot_.begin();
     tflow_on_ = true;
@@ -320,7 +306,8 @@ bool Tflow::post(bool report) {
 
     unsigned int class_id = static_cast<unsigned int>(clas[i]);
 
-    if (class_id < labels_.size()) {
+    auto it = label_pairs_.find(class_id);
+    if ( it != label_pairs_.end()) {
       if (scor[i] >= threshold_ && scor[i] <= 1.f) {
 
         // clamp
@@ -332,22 +319,12 @@ bool Tflow::post(bool report) {
         if (top < bottom) {
           if (left < right) {
 
-            auto it = std::find_if(labels_pairs_.begin(), labels_pairs_.end(),
-                [&](const std::pair<unsigned int, BoxBuf::Type>& pr) {
-                  return pr.first == class_id;
-                });
-
-            auto btype = BoxBuf::Type::kUnknown;
-            if (it != labels_pairs_.end()) {
-              btype = (*it).second;
-            }
-
 #if DEBUG_MESSAGES
             dbgMsg("t:%f,l:%f,b:%f,r:%f, scor:%f, class:%d (%s)\n",
-                top, left, bottom, right, scor[i], class_id, labels_[class_id].c_str());
+                top, left, bottom, right, scor[i], class_id, label_pairs_[class_id].first.c_str());
 #else
             if (report && !quiet_) {
-              fprintf(stderr, "<%s>", labels_[class_id].c_str());
+              fprintf(stderr, "<%s>", label_pairs_[class_id].first.c_str());
               fflush(stderr);
             }
 #endif
@@ -359,6 +336,7 @@ bool Tflow::post(bool report) {
             unsigned int width_uint  = right_uint  - left_uint;
             unsigned int height_uint = bottom_uint - top_uint;
 
+            BoxBuf::Type btype = label_pairs_[class_id].second;
             boxes->push_back(BoxBuf(
                 btype, frame_.id, left_uint, top_uint, width_uint, height_uint));
           }
@@ -435,6 +413,12 @@ bool Tflow::waitingToHalt() {
     while (!tflow_empty_) {
       oneRun(false);
     }
+
+    // reset tensorflow ojects
+    model_interpreter_.reset();
+    resize_interpreter_.reset();
+    edgetpu_context_.reset();
+    model_.reset();
 
     // report
     if (!quiet_) {

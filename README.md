@@ -4,10 +4,14 @@ Detector is a video pipeline application for the
 [raspberry pi 3b+](https://www.raspberrypi.org/products/raspberry-pi-3-model-b-plus) with 
 realtime object detection.  Objects are identified in the output video with bounding 
 boxes.  Object detection is provided by [Tensorflow Lite](https://www.tensorflow.org/lite) 
-running the [COCO SSD MobileNet v1 model](http://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip).  The resulting video can be saved to an H264 elemental 
-stream file or served up via RTSP.  The application is written in C++. 
+running the [COCO SSD MobileNet V2 Quantized model](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v2_quantized_300x300_coco_2019_01_03.tar.gz).  The resulting video can be saved to an H264 elemental 
+stream file or served up via RTSP.  In addition, the application will take advantage of a [Edge TPU](https://coral.ai/products/accelerator/) if one is present.
+
+The application is written in C++. 
 
 Many thanks to the [Tensorflow](https://www.tensorflow.org) project for doing the object detection heavy lifting.
+
+Many thanks to the [Google Coral](https://coral.ai/) project for providing the TPU accelerator.
 
 Many thinks to the [Live555](http://www.live555.com/) project for providing the RTSP implementation.
 
@@ -27,19 +31,23 @@ export OMXSUPPORT=$RASPBIAN/vc
 export LIVE555=$RASPBIAN/live
 # TensorFlow location
 export TFLOWSDK=$RASPBIAN/tensorflow
+# Edge Tpu location
+export EDGETPUSDK=$RASPBIAN/edgetpu
 ```
 
-Get Tensorflow, Live555 and Detector like this:
+Get Tensorflow, Edgetpu, Live555 and Detector like this:
 ```
 cd your/workspace/raspbian
 git clone https://gitlab.com:tylerjbrooks/tensorflow.git
 cd tensorflow
-git checkout r2.2  #tensorflow release 2.2
+git checkout d855adf  #tensorflow commit d855adf
 cd ..
+https://github.com/google-coral/edgetpu
 git clone https://gitlab.com:tylerjbrooks/live.git
 git clone https://gitlab.com:tylerjbrooks/detector.git
 
 ```
+note:  the Edgetpu sdk currently only works with the 'd855adf' commit of tensorflow.
 
 Get the Raspbian tool chain like this:
 ```
@@ -87,23 +95,13 @@ make
 
 ### Usage
 
-Detector requires the model and label file be downloaded to the rpib3+ separately.  Setup a 
-deployment directory and download the model zip file like this:
-```
-# on the target rpi3b+
-cd your/deployment/dir/detector
-mkdir models
-cd models
-wget http://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip
-unzip coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip
-cd ..
-# copy your detector executable from your cross compile machine to here.
-```
+Detector requires the model and label file.  The default 
+models are alreadiy in the './models' directory.
 
 This is how you invoke detector:
 ```
-detector -?qrutdfwhbyesml [output]
-version: 0.5
+detector -?qprutdfwhbyesml [output]
+version: 1.0
 
   where:
   ?            = this screen
@@ -123,10 +121,12 @@ version: 0.5
   (y)ield time = yield time          (default = 1000usec)
   thr(e)ads    = number of tflow threads (default = 1)
   thre(s)hold  = object detect threshold (default = 0.5)
+  t(p)u        = use Edge TPU        (default = false)
   (m)odel      = path to model       (default = ./models/detect.tflite)
-  (l)abels     = path to labels      (default = ./models/labelmap.txt)
-  output       = output file name
-               = leave blank for stdout
+                                     (default = ./models/edgetpu_detect.tflite)
+  (l)abels     = path to labels      (default = ./models/labels.txt)
+                                     (default = ./models/edgetpu_labels.txt)
+  (o)utput     = output file name
                = no output if testtime is 0
 ```
 
@@ -134,7 +134,7 @@ version: 0.5
 
 A typical example command would be:
 ```
-./detector -t 10 -w -640 -h -480 -e 4 output.h264
+./detector -t 10 -w -640 -h -480 -e 4 -o output.h264
 ```
 
 This command will capture a 640x480 video for 10 seconds and write the H264 elemental stream
@@ -142,7 +142,7 @@ to 'output.h264'.  The TensorFlow Lite object detection engine will use 4 thread
 will look like this:
 
 ```
-./detector -t 10 -w -640 -h -480 -e 4 output.h264
+./detector -t 10 -w -640 -h -480 -e 4 -o output.h264
 
 
 Test Setup...
@@ -156,6 +156,7 @@ Test Setup...
   yield time: 1000 usec
      threads: 4
    threshold: 0.500000
+         tpu: no
        model: ./models/detect.tflite
       lables: ./models/labelmap.txt
       output: output.h264
@@ -226,6 +227,7 @@ rstp address: 192.168.1.85
   yield time: 1000 usec
      threads: 1
    threshold: 0.500000
+         tpu: no
        model: ./models/detect.tflite
       lables: ./models/labelmap.txt
       output: none
@@ -268,6 +270,67 @@ stream like this:
 cvlc rtsp://192.168.1.156:8554/camera 
 ```
 
+#### Edge TPU Example
+
+```
+./detector -r -u 192.168.1.85 -t 0 -w -640 -h -480 -p
+
+Test Setup...
+   test time: run until ctrl-c
+      device: /dev/video0
+        rtsp: yes
+rstp address: 192.168.1.85
+   framerate: 20 fps
+       width: 640 pix (flipped)
+      height: 480 pix (flipped)
+     bitrate: 1000000 bps
+  yield time: 1000 usec
+     threads: 1
+   threshold: 0.500000
+     use tpu: yes
+       model: ./models/edgetpu_detect.tflite
+      lables: ./models/edgetpu_labels.txt
+      output: none
+
+         pid: top -H -p 1211
+
+Play this stream using: rtsp://192.168.1.156:8554/camera
+
+
+Hit ctrl-c to terminate...
+
+....<person>...<person>...<person>..<person>...<person>...<person>...^C
+
+Capturer Results...
+   number of frames captured: 1603
+   tflow copy time (us): high:1316 avg:279 low:5 frames1603
+  encode copy time (us): high:1749 avg:900 low:747 frames1603
+        total test time: 74.120842 sec
+      frames per second: 21.626846 fps
+
+<person>
+Tflow Results...
+  image copy time (us): high:1299 avg:812 low:768 frames532
+  image prep time (us): high:103796 avg:67993 low:64642 frames532
+  image eval time (us): high:255985 avg:58495 low:56647 frames532
+  image post time (us): high:265 avg:108 low:42 frames532
+       total test time: 74.665337 sec
+     frames per second: 7.125127 fps
+
+
+Encoder Results...
+  image copy   time (us): high:1732 avg:886 low:737 frames1603
+  image encode time (us): high:72334 avg:4519 low:3229 frames1603
+         total test time: 78.029808 sec
+       frames per second: 20.543432 fps
+```
+Notice in this example the image evaluation takes about 60ms on average as compared to ~180ms
+when running without the TPU (using 4 engines, however).  So using the TPU is about 
+3 times as fast altough the inferences per second are about double.  The reason for 
+this is that the TPU is connecteed to the rpi3b+ via USB 2.0 and the resize and 
+inferencing are IO bound.
+
+
 ### Discussion
 
 Detector is composed of a UI thread plus four worker threads.
@@ -289,23 +352,8 @@ the comment at the top of base.h for more details.
 
 ### Notes
 
-For improved performance, use the [COCO SSD MobileNet V2 Quantized model](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v2_quantized_300x300_coco_2019_01_03.tar.gz) instead of the V1 model.  However, this model requires some processing to make it tensorflow lite compatible before you can use it.  If you don't 
-have tensorflow installed then follow [these](https://www.tensorflow.org/install/pip#package-location) instructions.  Then use this command to processing model into a tensorflow lite compatible model:
-```
-tflite_convert --graph_def_file=./tflite_graph.pb \
---output_file=./detect.tflite \
---input_shapes=1,300,300,3 \
---input_arrays=normalized_input_image_tensor \
---output_arrays='TFLite_Detection_PostProcess','TFLite_Detection_PostProcess:1','TFLite_Detection_PostProcess:2','TFLite_Detection_PostProcess:3' \
---inference_type=QUANTIZED_UINT8 \
---mean_values=128 \
---std_dev_values=128 \
---change_concat_input_ranges=false \
---allow_custom_ops
-```
-
 ### To Do
 
 - Get RTSP to work faster than 20fps
-- Try different tflite detection models
-- Try tflite delegation for faster object detection
+- Done. ~Try different tflite detection models~
+- Done. ~Try tflite delegation for faster object detection~

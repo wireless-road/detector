@@ -20,12 +20,11 @@
 #define TFLOW_H
 
 #include <string>
-#include <queue>
 #include <memory>
 #include <atomic>
 #include <thread>
 #include <mutex>
-#include <future>
+#include <map>
 
 #include "utils.h"
 #include "listener.h"
@@ -46,7 +45,7 @@ class Tflow : public Base, Listener<FrameBuf> {
   public:
     static std::unique_ptr<Tflow> create(unsigned int yield_time, bool quiet, 
         Encoder* enc, unsigned int width, unsigned int height, const char* model,
-        const char* labels, unsigned int threads, float threshold);
+        const char* labels, unsigned int threads, float threshold, bool tpu);
     virtual ~Tflow();
 
   public:
@@ -57,7 +56,7 @@ class Tflow : public Base, Listener<FrameBuf> {
     Tflow(unsigned int yield_time);
     bool init(bool quiet, Encoder* enc, unsigned int width, 
         unsigned int height, const char* model, const char* labels, 
-        unsigned int threads, float threshold);
+        unsigned int threads, float threshold, bool tpu);
 
   protected:
     virtual bool waitingToRun();
@@ -67,6 +66,7 @@ class Tflow : public Base, Listener<FrameBuf> {
 
   private:
     bool quiet_;
+    bool tpu_;
     Encoder* enc_;
     unsigned int width_;
     unsigned int height_;
@@ -80,9 +80,18 @@ class Tflow : public Base, Listener<FrameBuf> {
     unsigned int model_threads_;
 
     std::string labels_fname_;
-    std::vector<std::string> labels_;
-    std::vector<std::pair<unsigned int, BoxBuf::Type>> labels_pairs_;
-    bool addLabel(const char* label, BoxBuf::Type type);
+    std::map<unsigned int, std::pair<std::string, BoxBuf::Type>> label_pairs_;
+    const std::map<std::string, BoxBuf::Type> boxbuf_pairs_ = 
+    {
+      { "person",     BoxBuf::Type::kPerson  },
+      { "cat",        BoxBuf::Type::kPet     },
+      { "dog",        BoxBuf::Type::kPet     },
+      { "car",        BoxBuf::Type::kVehicle },
+      { "bus",        BoxBuf::Type::kVehicle },
+      { "truck",      BoxBuf::Type::kVehicle },
+      { "bicycle",    BoxBuf::Type::kVehicle },
+      { "motorcycle", BoxBuf::Type::kVehicle }
+    };
 
     class Frame {
       public:
@@ -97,6 +106,7 @@ class Tflow : public Base, Listener<FrameBuf> {
     Tflow::Frame frame_;
 
     std::unique_ptr<tflite::FlatBufferModel> model_;
+    std::shared_ptr<edgetpu::EdgeTpuContext> edgetpu_context_;
     std::unique_ptr<tflite::Interpreter> model_interpreter_;
     std::unique_ptr<tflite::Interpreter> resize_interpreter_;
 
