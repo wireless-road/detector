@@ -57,6 +57,9 @@ class Tracker : public Base, Listener<std::shared_ptr<std::vector<BoxBuf>>> {
     bool quiet_;
     Encoder* enc_;
 
+    bool associateTracks();
+    bool createNewTracks();
+
     MicroDiffer<uint32_t> differ_tot_;
     std::timed_mutex targets_lock_;
     std::shared_ptr<std::vector<BoxBuf>> targets_;

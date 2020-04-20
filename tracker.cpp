@@ -84,6 +84,13 @@ bool Tracker::waitingToRun() {
   return true;
 }
 
+bool Tracker::associateTracks() {
+  return true;
+}
+
+bool Tracker::createNewTracks() {
+  return true;
+}
 
 bool Tracker::running() {
 
@@ -93,7 +100,9 @@ bool Tracker::running() {
     if (targets_ != nullptr) {
       if (targets_->size() != 0) {
 
-        // todo
+        associateTracks();
+
+        createNewTracks();
 
       }
     }
