@@ -39,7 +39,7 @@ LIBS += -lopenmaxil -lbcm_host -lvcos -lvchiq_arm -lbrcmEGL -lbrcmGLESv2 -lpthre
 #add these if cross compiling
 # this is weird but I can't seem to 'apt install libuse-1.0-dev' so I have 
 # copied them into the home directory from the rpi
-LDFLAGS += -L.
+LDFLAGS += -L./lib
 LIBS += -l:libc.so.6 -l:libudev.so.1 -l:libusb-1.0.so.0
 
 INCLUDES = \
