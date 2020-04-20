@@ -7,7 +7,7 @@
 
 CXX = $(RASPBIANCROSS)g++
 
-SRC = detector.cpp base.cpp capturer.cpp tflow.cpp encoder.cpp rtsp.cpp utils.cpp
+SRC = detector.cpp base.cpp capturer.cpp tflow.cpp tracker.cpp encoder.cpp rtsp.cpp utils.cpp
 OBJ = $(SRC:.cpp=.o)
 EXE = detector
 

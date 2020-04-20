@@ -30,6 +30,7 @@
 #include "rtsp.h"
 #include "capturer.h"
 #include "tflow.h"
+#include "tracker.h"
 
 namespace detector {
 
@@ -37,6 +38,7 @@ std::unique_ptr<Encoder>  enc(nullptr);
 std::unique_ptr<Rtsp>     rtsp(nullptr);
 std::unique_ptr<Capturer> cap(nullptr);
 std::unique_ptr<Tflow>    tfl(nullptr);
+std::unique_ptr<Tracker>  trk(nullptr);
 
 void usage() {
   std::cout << "detector -?qprutdfwhbyesml [output]" << std::endl;
@@ -71,11 +73,13 @@ void usage() {
 
 void quitHandler(int s) {
   if (cap)  { cap->stop(); }
+  if (trk)  { trk->stop(); }
   if (tfl)  { tfl->stop(); }
   if (enc)  { enc->stop(); }
   if (rtsp) { rtsp->stop(); }
 
   cap.reset(nullptr);
+  trk.reset(nullptr);
   tfl.reset(nullptr);
   enc.reset(nullptr);
   rtsp.reset(nullptr);
@@ -177,7 +181,8 @@ int main(int argc, char** argv) {
   }
   enc = Encoder::create(yield_time, quiet, rtsp.get(), framerate, 
       std::abs(wdth), std::abs(hght), bitrate, output, testtime);
-  tfl = Tflow::create(2*yield_time, quiet, enc.get(), std::abs(wdth), 
+  trk = Tracker::create(yield_time, quiet, enc.get());
+  tfl = Tflow::create(2*yield_time, quiet, enc.get(), trk.get(), std::abs(wdth), 
       std::abs(hght), model.c_str(), labels.c_str(), threads, threshold, tpu);
   cap = Capturer::create(yield_time, quiet, enc.get(), tfl.get(), 
       device, framerate, wdth, hght);
@@ -186,6 +191,7 @@ int main(int argc, char** argv) {
   dbgMsg("start\n");
   if (streaming) { rtsp->start("rtsp", 90); }
   enc->start("enc", 50);
+  trk->start("trk", 20);
   tfl->start("tfl", 20);
   cap->start("cap", 90);
 
@@ -193,6 +199,7 @@ int main(int argc, char** argv) {
   dbgMsg("run\n");
   if (streaming) { rtsp->run(); }
   enc->run();
+  trk->run();
   tfl->run();
   cap->run();
 
@@ -218,12 +225,14 @@ int main(int argc, char** argv) {
   dbgMsg("stop\n");
   cap->stop();
   tfl->stop();
+  trk->stop();
   enc->stop();
   if (streaming) { rtsp->stop(); }
 
   // destroy
   cap.reset(nullptr);
   tfl.reset(nullptr);
+  trk.reset(nullptr);
   enc.reset(nullptr);
   rtsp.reset(nullptr);
 

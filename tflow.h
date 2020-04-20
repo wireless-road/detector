@@ -30,6 +30,7 @@
 #include "listener.h"
 #include "base.h"
 #include "encoder.h"
+#include "tracker.h"
 
 #include "edgetpu.h"
 
@@ -44,8 +45,9 @@ namespace detector {
 class Tflow : public Base, Listener<FrameBuf> {
   public:
     static std::unique_ptr<Tflow> create(unsigned int yield_time, bool quiet, 
-        Encoder* enc, unsigned int width, unsigned int height, const char* model,
-        const char* labels, unsigned int threads, float threshold, bool tpu);
+        Encoder* enc, Tracker* trk, unsigned int width, unsigned int height, 
+        const char* model, const char* labels, unsigned int threads, 
+        float threshold, bool tpu);
     virtual ~Tflow();
 
   public:
@@ -54,7 +56,7 @@ class Tflow : public Base, Listener<FrameBuf> {
   protected:
     Tflow() = delete;
     Tflow(unsigned int yield_time);
-    bool init(bool quiet, Encoder* enc, unsigned int width, 
+    bool init(bool quiet, Encoder* enc, Tracker* trk, unsigned int width, 
         unsigned int height, const char* model, const char* labels, 
         unsigned int threads, float threshold, bool tpu);
 
@@ -68,6 +70,7 @@ class Tflow : public Base, Listener<FrameBuf> {
     bool quiet_;
     bool tpu_;
     Encoder* enc_;
+    Tracker* trk_;
     unsigned int width_;
     unsigned int height_;
     const unsigned int channels_ = {3};

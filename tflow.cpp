@@ -39,15 +39,15 @@ Tflow::~Tflow() {
 }
 
 std::unique_ptr<Tflow> Tflow::create(unsigned int yield_time, bool quiet, 
-    Encoder* enc, unsigned int width, unsigned int height, 
+    Encoder* enc, Tracker* trk, unsigned int width, unsigned int height, 
     const char* model, const char* labels, unsigned int threads, float threshold, 
     bool tpu) {
   auto obj = std::unique_ptr<Tflow>(new Tflow(yield_time));
-  obj->init(quiet, enc, width, height, model, labels, threads, threshold, tpu);
+  obj->init(quiet, enc, trk, width, height, model, labels, threads, threshold, tpu);
   return obj;
 }
 
-bool Tflow::init(bool quiet, Encoder* enc, unsigned int width, 
+bool Tflow::init(bool quiet, Encoder* enc, Tracker* trk, unsigned int width, 
     unsigned int height, const char* model, const char* labels, 
     unsigned int threads, float threshold, bool tpu) {
 
@@ -55,6 +55,7 @@ bool Tflow::init(bool quiet, Encoder* enc, unsigned int width,
   tpu_ = tpu;
 
   enc_ = enc;
+  trk_ = trk;
   
   width_ = width;
   height_ = height;
@@ -304,8 +305,7 @@ bool Tflow::post(bool report) {
 
   differ_post_.begin();
   
-  auto boxes = std::shared_ptr<std::vector<BoxBuf>>(
-        new std::vector<BoxBuf>);
+  auto boxes = std::make_shared<std::vector<BoxBuf>>();
 
   const std::vector<int>& res = model_interpreter_->outputs();
   float* locs = tflite::GetTensorData<float>(model_interpreter_->tensor(res[0]));
@@ -362,7 +362,10 @@ bool Tflow::post(bool report) {
   if (enc_) {
     if (post_id_ <= frame_.id) {
       if (!enc_->addMessage(boxes)) {
-        dbgMsg("xnor target encoder busy\n");
+        dbgMsg("encoder busy\n");
+      }
+      if (!trk_->addMessage(boxes)) {
+        dbgMsg("tracker busy\n");
       }
       post_id_ = frame_.id;
     }
