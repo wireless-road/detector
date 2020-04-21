@@ -54,8 +54,8 @@ class Encoder : public Base, Listener<FrameBuf>,
     virtual ~Encoder();
 
   public:
-    virtual bool addMessage(FrameBuf& data);
-    virtual bool addMessage(std::shared_ptr<std::vector<BoxBuf>>& data);
+    virtual bool addMessage(FrameBuf& fbuf);
+    virtual bool addMessage(std::shared_ptr<std::vector<BoxBuf>>& targets);
 
   protected:
     Encoder() = delete;

@@ -375,16 +375,6 @@ bool Tflow::post(bool report) {
   return true;
 }
 
-const char* Tflow::boxBufTypeStr(BoxBuf::Type t) {
-  switch (t) {
-    case BoxBuf::Type::kUnknown: return "unknown";
-    case BoxBuf::Type::kPerson:  return "person";
-    case BoxBuf::Type::kPet:     return "pet";
-    case BoxBuf::Type::kVehicle: return "vehicle";
-  }
-  return "unknown";
-}
-
 bool Tflow::oneRun(bool report) {
 
   if (!tflow_empty_) {

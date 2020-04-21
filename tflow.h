@@ -130,7 +130,6 @@ class Tflow : public Base, Listener<FrameBuf> {
     bool prep();
     bool eval();
     bool post(bool report);
-    const char* boxBufTypeStr(BoxBuf::Type t);
     bool oneRun(bool report);
 
     std::timed_mutex tflow_lock_;

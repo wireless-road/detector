@@ -42,7 +42,7 @@ class FrameBuf {
     unsigned char* addr;
 };
 
-// encapsulate bounding box
+// encapsulate box
 class BoxBuf {
   public:
     enum class Type {
@@ -51,12 +51,11 @@ class BoxBuf {
       kPet,
       kVehicle
     };
-  public: 
-    BoxBuf() = delete;
-    BoxBuf(BoxBuf::Type t, unsigned int i, unsigned int left, 
+  public:
+    BoxBuf() = default;
+    BoxBuf(BoxBuf::Type type, unsigned int id, unsigned int left, 
         unsigned int top, unsigned int width, unsigned int height) 
-      : type(t), id(i), x(left), y(top), w(width), h(height) {}
-    BoxBuf(BoxBuf const & b) = default;
+      : type(type), id(id), x(left), y(top), w(width), h(height) {}
     ~BoxBuf() {}
   public:
     BoxBuf::Type type;
@@ -86,7 +85,7 @@ class Listener {
     virtual ~Listener() {}
 
   public:
-    const unsigned int timeout_ = {1000};
+    const unsigned int timeout_{1000};
     virtual bool addMessage(T& data) = 0;
 };
 

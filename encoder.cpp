@@ -101,7 +101,7 @@ bool Encoder::addMessage(FrameBuf& fbuf) {
   return true;
 }
 
-bool Encoder::addMessage(std::shared_ptr<std::vector<BoxBuf>>& boxes) {
+bool Encoder::addMessage(std::shared_ptr<std::vector<BoxBuf>>& targets) {
 
   std::unique_lock<std::timed_mutex> lck(targets_lock_, std::defer_lock);
 
@@ -111,7 +111,7 @@ bool Encoder::addMessage(std::shared_ptr<std::vector<BoxBuf>>& boxes) {
     return false;
   }
 
-  targets_ = boxes;
+  targets_ = targets;
 
   return true;
 }
