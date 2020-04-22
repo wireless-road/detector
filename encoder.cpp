@@ -116,6 +116,21 @@ bool Encoder::addMessage(std::shared_ptr<std::vector<BoxBuf>>& targets) {
   return true;
 }
 
+bool Encoder::addMessage(std::shared_ptr<std::vector<TrackBuf>>& tracks) {
+
+  std::unique_lock<std::timed_mutex> lck(tracks_lock_, std::defer_lock);
+
+  if (!lck.try_lock_for(
+        std::chrono::microseconds(Listener<std::shared_ptr<std::vector<BoxBuf>>>::timeout_))) {
+    dbgMsg("encoder track lock busy\n");
+    return false;
+  }
+
+  tracks_ = tracks;
+
+  return true;
+}
+
 #ifdef OUTPUT_VARIOUS_BITS_OF_INFO
 void Encoder::printDef(OMX_PARAM_PORTDEFINITIONTYPE def) {
   const char* dir;

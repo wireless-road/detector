@@ -32,16 +32,28 @@
 
 namespace detector {
 
+const Eigen::Matrix<double, 6, 6> Tracker::Track::A_{
+  { 1, 0, 1, 0, 0, 0 },
+  { 0, 1, 0, 1, 0, 0 },
+  { 0, 0, 1, 0, 1, 0 },
+  { 0, 0, 0, 1, 0, 1 },
+  { 0, 0, 0, 0, 0, 0 },
+  { 0, 0, 0, 0, 0, 0 }
+};
+const Eigen::Matrix<double, 2, 6> Tracker::Track::H_{
+  { 1, 0, 0, 0, 0, 0 },
+  { 0, 1, 0, 0, 0, 0 }
+};
 
 Tracker::Track::Track(unsigned int track_id, const BoxBuf& box)
-  : id_(track_id), frm_(box.id), 
-    x_(box.x), y_(box.y), w_(box.w), h_(box.h) {
+  : id(track_id), frm(box.id), 
+    x(box.x), y(box.y), w(box.w), h(box.h) {
 
   state_ = Tracker::Track::State::kInit;
 
   // initialize state vector with inital position
-  double mid_x = x_ + w_ / 2.0;
-  double mid_y = y_ + h_ / 2.0;
+  double mid_x = x + w / 2.0;
+  double mid_y = y + h / 2.0;
   X_ << mid_x,mid_y,0,0,0,0;
 
   // initialize error covariance matrix
@@ -90,13 +102,13 @@ double Tracker::Track::getDistance(double mid_x, double mid_y) {
 
 void Tracker::Track::addTarget(const BoxBuf& box) {
 
-  frm_ = box.id;
-  x_ = box.x;
-  y_ = box.y;
-  w_ = box.w;
-  h_ = box.h;
-  double mid_x = x_ + w_ / 2.0;
-  double mid_y = y_ + h_ / 2.0;
+  frm = box.id;
+  x = box.x;
+  y = box.y;
+  w = box.w;
+  h = box.h;
+  double mid_x = x + w / 2.0;
+  double mid_y = y + h / 2.0;
 
   if (state_ == Tracker::Track::State::kInit) {
     X_(2) = (mid_x - X_(0));
@@ -133,8 +145,7 @@ bool Tracker::init(bool quiet, Encoder* enc, double max_dist, unsigned int max_f
   max_dist_ = max_dist;
   max_frm_ = max_frm;
 
-  frm_ = 0;
-  last_frm_ = 0;
+  current_frm_ = 0;
   track_cnt_ = 0;
 
   tracker_on_ = false;
@@ -214,17 +225,47 @@ bool Tracker::associateTracks() {
 bool Tracker::createNewTracks() {
 
   if (targets_.size()) {
-    for (unsigned int i = 0; i < targets_.size(); i++ ) {
-      tracks_.push_back(Tracker::Track(track_cnt_, targets_[i]));
-      track_cnt_ += 1;
-    }
+    for_each(targets_.begin(), targets_.end(),
+        [&](const BoxBuf& b) {
+          tracks_.push_back(Tracker::Track(track_cnt_, b));
+          track_cnt_ += 1;
+        });
   }
+
+  targets_.resize(0);
 
   return true;
 }
 
 bool Tracker::cleanupTracks() {
 
+  // remove old tracks
+  tracks_.erase(
+      std::remove_if(tracks_.begin(), tracks_.end(),
+        [&] (const Tracker::Track& t) {
+          return max_frm_ < current_frm_ - t.frm;;
+        }), 
+      tracks_.end());
+
+  return true;
+}
+
+bool Tracker::postTracks() {
+
+  auto tracks = std::make_shared<std::vector<TrackBuf>>();
+
+  for_each(tracks_.begin(), tracks_.end(),
+      [&](const Tracker::Track& t) {
+        tracks->push_back(TrackBuf(
+              t.type, t.id,
+              round(t.x), round(t.y), round(t.w), round(t.h)));
+      });
+
+  if (enc_) {
+    if (!enc_->addMessage(tracks)) {
+      dbgMsg("encoder busy");
+    }
+  }
   return true;
 }
 
@@ -237,15 +278,15 @@ bool Tracker::running() {
 
       // all frame ids are the same in a target collection
       // so it is safe to pick off the first one
-      frm_ = targets_[0].id;  
+      current_frm_ = targets_[0].id;  
 
       associateTracks();
 
       createNewTracks();
 
       cleanupTracks();
-      targets_.resize(0);
-      last_frm_ = frm_;
+
+      postTracks();
     }
   }
 

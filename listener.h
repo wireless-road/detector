@@ -63,6 +63,16 @@ class BoxBuf {
     unsigned int x, y, w, h;
 };
 
+// encapsulate track
+class TrackBuf : public BoxBuf {
+  public:
+    TrackBuf() = default;
+    TrackBuf(BoxBuf::Type type, unsigned int id, unsigned int left, 
+        unsigned int top, unsigned int width, unsigned int height) 
+      : BoxBuf(type, id, left, top, width, height) {}
+    ~TrackBuf() {}
+};
+
 // encapsulate NAL
 class NalBuf {
   public:

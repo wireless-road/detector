@@ -45,8 +45,10 @@ extern "C" {
 
 namespace detector {
 
-class Encoder : public Base, Listener<FrameBuf>, 
-  Listener<std::shared_ptr<std::vector<BoxBuf>>> {
+class Encoder : public Base, 
+  Listener<FrameBuf>, 
+  Listener<std::shared_ptr<std::vector<BoxBuf>>>,
+  Listener<std::shared_ptr<std::vector<TrackBuf>>> {
   public:
     static std::unique_ptr<Encoder> create(unsigned int yield_time, bool quiet, 
         Rtsp* rtsp, unsigned int framerate, unsigned int width, unsigned int height, 
@@ -56,6 +58,7 @@ class Encoder : public Base, Listener<FrameBuf>,
   public:
     virtual bool addMessage(FrameBuf& fbuf);
     virtual bool addMessage(std::shared_ptr<std::vector<BoxBuf>>& targets);
+    virtual bool addMessage(std::shared_ptr<std::vector<TrackBuf>>& tracks);
 
   protected:
     Encoder() = delete;
@@ -143,6 +146,9 @@ class Encoder : public Base, Listener<FrameBuf>,
 
     std::timed_mutex targets_lock_;
     std::shared_ptr<std::vector<BoxBuf>> targets_;
+
+    std::timed_mutex tracks_lock_;
+    std::shared_ptr<std::vector<TrackBuf>> tracks_;
 
     const unsigned int thickness_ = 4;
 

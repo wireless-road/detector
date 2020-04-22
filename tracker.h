@@ -47,38 +47,31 @@ class Tracker : public Base, Listener<std::shared_ptr<std::vector<BoxBuf>>> {
         };
 
       public: 
-        Track() = delete;
+        Track() = default;
         Track(unsigned int track_id, const BoxBuf& box);
+        Track(const Tracker::Track& t) = default;
+        Tracker::Track& operator=(Tracker::Track&& t) { return *this; }
         ~Track() {}
 
       public:
         double getDistance(double mid_x, double mid_y);
         void addTarget(const BoxBuf& box);
 
-      private:
-        unsigned int id_;
-        unsigned int frm_;
-        BoxBuf::Type type_;
-        double x_, y_, w_, h_;
+      public:
+        unsigned int id;
+        unsigned int frm;
+        BoxBuf::Type type;
+        double x, y, w, h;
 
+      private:
         Track::State state_{Track::State::kInit};
 
         const double initial_error_{1.0};
         const double process_variance_{1.0};
         const double measure_variance_{1.0};
 
-        const Eigen::Matrix<double, 6, 6> A_{
-          { 1, 0, 1, 0, 0, 0 },
-          { 0, 1, 0, 1, 0, 0 },
-          { 0, 0, 1, 0, 1, 0 },
-          { 0, 0, 0, 1, 0, 1 },
-          { 0, 0, 0, 0, 0, 0 },
-          { 0, 0, 0, 0, 0, 0 }
-        };
-        const Eigen::Matrix<double, 2, 6> H_{
-          { 1, 0, 0, 0, 0, 0 },
-          { 0, 1, 0, 0, 0, 0 }
-        };
+        const static Eigen::Matrix<double, 6, 6> A_;
+        const static Eigen::Matrix<double, 2, 6> H_;
 
         Eigen::Matrix<double, 6, 1> X_;
         Eigen::Matrix<double, 6, 6> P_;
@@ -115,8 +108,7 @@ class Tracker : public Base, Listener<std::shared_ptr<std::vector<BoxBuf>>> {
     double max_dist_;
     unsigned int max_frm_;
 
-    unsigned int frm_;
-    unsigned int last_frm_;
+    unsigned int current_frm_;
     unsigned int track_cnt_;
     std::vector<Track> tracks_;
 
@@ -128,6 +120,7 @@ class Tracker : public Base, Listener<std::shared_ptr<std::vector<BoxBuf>>> {
     bool associateTracks();
     bool createNewTracks();
     bool cleanupTracks();
+    bool postTracks();
 };
 
 } // namespace detector
