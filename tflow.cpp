@@ -341,10 +341,10 @@ bool Tflow::post(bool report) {
               fflush(stderr);
             }
 #endif
-            unsigned int top_uint    = top    * height_;
-            unsigned int bottom_uint = bottom * height_;
-            unsigned int left_uint   = left   * width_;
-            unsigned int right_uint  = right  * width_;
+            unsigned int top_uint    = round(top    * height_);
+            unsigned int bottom_uint = round(bottom * height_);
+            unsigned int left_uint   = round(left   * width_);
+            unsigned int right_uint  = round(right  * width_);
 
             unsigned int width_uint  = right_uint  - left_uint;
             unsigned int height_uint = bottom_uint - top_uint;
@@ -359,16 +359,18 @@ bool Tflow::post(bool report) {
   }
 
   // send boxes if new
-  if (enc_) {
-    if (post_id_ <= frame_.id) {
+  if (post_id_ <= frame_.id) {
+    if (enc_) {
       if (!enc_->addMessage(boxes)) {
         dbgMsg("encoder busy\n");
       }
+    }
+    if (trk_) {
       if (!trk_->addMessage(boxes)) {
         dbgMsg("tracker busy\n");
       }
-      post_id_ = frame_.id;
     }
+    post_id_ = frame_.id;
   }
   differ_post_.end();
 

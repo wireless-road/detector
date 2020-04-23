@@ -424,7 +424,7 @@ void Encoder::overlay(std::shared_ptr<Encoder::Frame>& frame) {
 
   // targets
   {
-    std::unique_lock<std::timed_mutex> tlck(targets_lock_);
+    std::unique_lock<std::timed_mutex> lck(targets_lock_);
     if (targets_ != nullptr) {
       if (targets_->size() != 0) {
         std::for_each(targets_->begin(), targets_->end(),
@@ -443,7 +443,7 @@ void Encoder::overlay(std::shared_ptr<Encoder::Frame>& frame) {
 
   // tracks
   {
-    std::unique_lock<std::timed_mutex> tlck(tracks_lock_);
+    std::unique_lock<std::timed_mutex> lck(tracks_lock_);
     if (tracks_ != nullptr) {
       if (tracks_->size() != 0) {
         std::for_each(tracks_->begin(), tracks_->end(),
@@ -465,7 +465,6 @@ void Encoder::overlay(std::shared_ptr<Encoder::Frame>& frame) {
       }
     }
   }
-
 }
 
 bool Encoder::running() {
