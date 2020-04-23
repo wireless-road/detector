@@ -190,7 +190,7 @@ int main(int argc, char** argv) {
     trk = Tracker::create(yield_time, quiet, enc.get(), dist, 2*framerate);
   }
   tfl = Tflow::create(2*yield_time, quiet, enc.get(), trk.get(), std::abs(wdth), 
-      std::abs(hght), model.c_str(), labels.c_str(), threads, threshold, tpu, tracking);
+      std::abs(hght), model.c_str(), labels.c_str(), threads, threshold, tpu);
   cap = Capturer::create(yield_time, quiet, enc.get(), tfl.get(), 
       device, framerate, wdth, hght);
 

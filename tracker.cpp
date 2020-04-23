@@ -163,8 +163,12 @@ bool Tracker::addMessage(std::shared_ptr<std::vector<BoxBuf>>& boxes) {
     return false;
   }
 
+  // only copy targets types we are tracking
   targets_.resize(boxes->size());
-  std::copy(boxes->begin(), boxes->end(), targets_.begin());
+  std::copy_if(boxes->begin(), boxes->end(), targets_.begin(),
+      [&](const BoxBuf& box) {
+        return target_types_.find(box.type) != target_types_.end();
+      });
 
   return true;
 }
@@ -183,6 +187,8 @@ bool Tracker::waitingToRun() {
 bool Tracker::associateTracks() {
 
   if (tracks_.size() && targets_.size()) {
+
+    differ_associate_.begin();
 
     // compute cost matrix
     std::vector<std::vector<double>> mat(tracks_.size(),
@@ -205,8 +211,8 @@ bool Tracker::associateTracks() {
     // add targets to tracks
     for (unsigned int i = 0; i < assignments.size(); i++) {
       int k = assignments[i];
-      double mid_x = targets_[i].x + targets_[i].w / 2.0;
-      double mid_y = targets_[i].y + targets_[i].h / 2.0;
+      double mid_x = targets_[k].x + targets_[k].w / 2.0;
+      double mid_y = targets_[k].y + targets_[k].h / 2.0;
       if (tracks_[i].getDistance(mid_x, mid_y) <= max_dist_) {
         tracks_[i].addTarget(targets_[k]);
         targets_[k].id = std::numeric_limits<unsigned int>::max();
@@ -220,6 +226,8 @@ bool Tracker::associateTracks() {
             return b.id == std::numeric_limits<unsigned int>::max();
           }), 
         targets_.end());
+
+    differ_associate_.end();
   }
 
   return true;
@@ -227,6 +235,7 @@ bool Tracker::associateTracks() {
 
 bool Tracker::createNewTracks() {
 
+  differ_create_.begin();
   if (targets_.size()) {
     for_each(targets_.begin(), targets_.end(),
         [&](const BoxBuf& b) {
@@ -237,10 +246,14 @@ bool Tracker::createNewTracks() {
 
   targets_.resize(0);
 
+  differ_create_.end();
+
   return true;
 }
 
 bool Tracker::cleanupTracks() {
+
+  differ_cleanup_.begin();
 
   // remove old tracks
   tracks_.erase(
@@ -250,10 +263,14 @@ bool Tracker::cleanupTracks() {
         }), 
       tracks_.end());
 
+  differ_cleanup_.end();
+
   return true;
 }
 
 bool Tracker::postTracks() {
+
+  differ_post_.begin();
 
   auto tracks = std::make_shared<std::vector<TrackBuf>>();
 
@@ -269,6 +286,8 @@ bool Tracker::postTracks() {
       dbgMsg("encoder busy");
     }
   }
+
+  differ_post_.end();
   return true;
 }
 
@@ -308,7 +327,19 @@ bool Tracker::waitingToHalt() {
 
     if (!quiet_) {
       fprintf(stderr, "\nTracker Results...\n");
-      fprintf(stderr, "       total test time: %f sec\n", 
+      fprintf(stderr, "  target association time (us): high:%u avg:%u low:%u cnt:%u\n", 
+          differ_associate_.high, differ_associate_.avg, 
+          differ_associate_.low,  differ_associate_.cnt);
+      fprintf(stderr, "        track create time (us): high:%u avg:%u low:%u cnt:%u\n", 
+          differ_create_.high, differ_create_.avg, 
+          differ_create_.low,  differ_create_.cnt);
+      fprintf(stderr, "       track cleanup time (us): high:%u avg:%u low:%u cnt:%u\n", 
+          differ_cleanup_.high, differ_cleanup_.avg, 
+          differ_cleanup_.low,  differ_cleanup_.cnt);
+      fprintf(stderr, "          track post time (us): high:%u avg:%u low:%u cnt:%u\n", 
+          differ_post_.high, differ_post_.avg, 
+          differ_post_.low,  differ_post_.cnt);
+      fprintf(stderr, "               total test time: %f sec\n", 
           differ_tot_.avg / 1000000.f);
       fprintf(stderr, "\n");
     }

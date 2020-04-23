@@ -24,7 +24,7 @@
 #include <atomic>
 #include <thread>
 #include <mutex>
-#include <map>
+#include <set>
 
 #include "utils.h"
 #include "listener.h"
@@ -113,8 +113,19 @@ class Tracker : public Base, Listener<std::shared_ptr<std::vector<BoxBuf>>> {
     std::vector<Track> tracks_;
 
     MicroDiffer<uint32_t> differ_tot_;
+    MicroDiffer<uint32_t> differ_associate_;
+    MicroDiffer<uint32_t> differ_create_;
+    MicroDiffer<uint32_t> differ_cleanup_;
+    MicroDiffer<uint32_t> differ_post_;
+
     std::timed_mutex targets_lock_;
     std::vector<BoxBuf> targets_;
+    std::set<BoxBuf::Type> target_types_{ 
+      BoxBuf::Type::kPerson, 
+      BoxBuf::Type::kPet, 
+      BoxBuf::Type::kVehicle
+    };
+
     std::atomic<bool> tracker_on_;
 
     bool associateTracks();

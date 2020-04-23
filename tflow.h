@@ -47,7 +47,7 @@ class Tflow : public Base, Listener<FrameBuf> {
     static std::unique_ptr<Tflow> create(unsigned int yield_time, bool quiet, 
         Encoder* enc, Tracker* trk, unsigned int width, unsigned int height, 
         const char* model, const char* labels, unsigned int threads, 
-        float threshold, bool tpu, bool tracking);
+        float threshold, bool tpu);
     virtual ~Tflow();
 
   public:
@@ -58,7 +58,7 @@ class Tflow : public Base, Listener<FrameBuf> {
     Tflow(unsigned int yield_time);
     bool init(bool quiet, Encoder* enc, Tracker* trk, unsigned int width, 
         unsigned int height, const char* model, const char* labels, 
-        unsigned int threads, float threshold, bool tpu, bool tracking);
+        unsigned int threads, float threshold, bool tpu);
 
   protected:
     virtual bool waitingToRun();
@@ -69,7 +69,6 @@ class Tflow : public Base, Listener<FrameBuf> {
   private:
     bool quiet_;
     bool tpu_;
-    bool tracking_;
     Encoder* enc_;
     Tracker* trk_;
     unsigned int width_;

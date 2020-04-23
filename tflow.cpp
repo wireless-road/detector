@@ -41,19 +41,18 @@ Tflow::~Tflow() {
 std::unique_ptr<Tflow> Tflow::create(unsigned int yield_time, bool quiet, 
     Encoder* enc, Tracker* trk, unsigned int width, unsigned int height, 
     const char* model, const char* labels, unsigned int threads, float threshold, 
-    bool tpu, bool tracking) {
+    bool tpu) {
   auto obj = std::unique_ptr<Tflow>(new Tflow(yield_time));
-  obj->init(quiet, enc, trk, width, height, model, labels, threads, threshold, tpu, tracking);
+  obj->init(quiet, enc, trk, width, height, model, labels, threads, threshold, tpu);
   return obj;
 }
 
 bool Tflow::init(bool quiet, Encoder* enc, Tracker* trk, unsigned int width, 
     unsigned int height, const char* model, const char* labels, 
-    unsigned int threads, float threshold, bool tpu, bool tracking) {
+    unsigned int threads, float threshold, bool tpu) {
 
   quiet_ = quiet;
   tpu_ = tpu;
-  tracking_ = tracking;
 
   enc_ = enc;
   trk_ = trk;
@@ -351,19 +350,8 @@ bool Tflow::post(bool report) {
             unsigned int height_uint = bottom_uint - top_uint;
 
             BoxBuf::Type btype = label_pairs_[class_id].second;
-            if (tracking_) {
-              // if tracking, then only send the targets
-              // listed in the boxbuf pairs.
-              auto it = boxbuf_pairs_.find(label_pairs_[class_id].first);
-              if (it != boxbuf_pairs_.end()) {
-                boxes->push_back(BoxBuf(
-                    it->second, frame_.id, left_uint, top_uint, width_uint, height_uint));
-              }
-            } else {
-              // if not tracking, then send any target
-              boxes->push_back(BoxBuf(
-                  btype, frame_.id, left_uint, top_uint, width_uint, height_uint));
-            }
+            boxes->push_back(BoxBuf(
+                btype, frame_.id, left_uint, top_uint, width_uint, height_uint));
           }
         }
       }
@@ -372,19 +360,14 @@ bool Tflow::post(bool report) {
 
   // send boxes if new
   if (post_id_ <= frame_.id) {
-    if (tracking_) {
-      // if tracking, then send targets to tracker
-      if (trk_) {
-        if (!trk_->addMessage(boxes)) {
-          dbgMsg("tracker busy\n");
-        }
+    if (enc_) {
+      if (!enc_->addMessage(boxes)) {
+        dbgMsg("encoder busy\n");
       }
-    } else {
-      // if not tracking, then send targets to encoder
-      if (enc_) {
-        if (!enc_->addMessage(boxes)) {
-          dbgMsg("encoder busy\n");
-        }
+    }
+    if (trk_) {
+      if (!trk_->addMessage(boxes)) {
+        dbgMsg("tracker busy\n");
       }
     }
     post_id_ = frame_.id;

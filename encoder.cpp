@@ -40,20 +40,20 @@ Encoder::Encoder(unsigned int yield_time)
 Encoder::~Encoder() {
 }
 
-std::unique_ptr<Encoder> Encoder::create(unsigned int yield_time, bool quiet, bool tracking_, 
+std::unique_ptr<Encoder> Encoder::create(unsigned int yield_time, bool quiet, bool tracking, 
     Rtsp* rtsp, unsigned int framerate, unsigned int width, unsigned int height, 
     unsigned int bitrate, std::string& output, unsigned int testtime) {
   auto obj = std::unique_ptr<Encoder>(new Encoder(yield_time));
-  obj->init(quiet, tracking_, rtsp, framerate, width, height, bitrate, output, testtime);
+  obj->init(quiet, tracking, rtsp, framerate, width, height, bitrate, output, testtime);
   return obj;
 }
 
-bool Encoder::init(bool quiet, bool tracking_, Rtsp* rtsp, unsigned int framerate, 
+bool Encoder::init(bool quiet, bool tracking, Rtsp* rtsp, unsigned int framerate, 
     unsigned int width, unsigned int height, unsigned int bitrate, 
     std::string& output, unsigned int testtime) {
 
   quiet_ = quiet;
-  tracking_ = tracking_;
+  tracking_ = tracking;
   rtsp_ = rtsp;
   framerate_ = framerate;
   width_ = width;
