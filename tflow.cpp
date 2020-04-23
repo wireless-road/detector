@@ -41,18 +41,19 @@ Tflow::~Tflow() {
 std::unique_ptr<Tflow> Tflow::create(unsigned int yield_time, bool quiet, 
     Encoder* enc, Tracker* trk, unsigned int width, unsigned int height, 
     const char* model, const char* labels, unsigned int threads, float threshold, 
-    bool tpu) {
+    bool tpu, bool tracking) {
   auto obj = std::unique_ptr<Tflow>(new Tflow(yield_time));
-  obj->init(quiet, enc, trk, width, height, model, labels, threads, threshold, tpu);
+  obj->init(quiet, enc, trk, width, height, model, labels, threads, threshold, tpu, tracking);
   return obj;
 }
 
 bool Tflow::init(bool quiet, Encoder* enc, Tracker* trk, unsigned int width, 
     unsigned int height, const char* model, const char* labels, 
-    unsigned int threads, float threshold, bool tpu) {
+    unsigned int threads, float threshold, bool tpu, bool tracking) {
 
   quiet_ = quiet;
   tpu_ = tpu;
+  tracking_ = tracking;
 
   enc_ = enc;
   trk_ = trk;
@@ -350,8 +351,19 @@ bool Tflow::post(bool report) {
             unsigned int height_uint = bottom_uint - top_uint;
 
             BoxBuf::Type btype = label_pairs_[class_id].second;
-            boxes->push_back(BoxBuf(
-                btype, frame_.id, left_uint, top_uint, width_uint, height_uint));
+            if (tracking_) {
+              // if tracking, then only send the targets
+              // listed in the boxbuf pairs.
+              auto it = boxbuf_pairs_.find(label_pairs_[class_id].first);
+              if (it != boxbuf_pairs_.end()) {
+                boxes->push_back(BoxBuf(
+                    it->second, frame_.id, left_uint, top_uint, width_uint, height_uint));
+              }
+            } else {
+              // if not tracking, then send any target
+              boxes->push_back(BoxBuf(
+                  btype, frame_.id, left_uint, top_uint, width_uint, height_uint));
+            }
           }
         }
       }
@@ -360,14 +372,19 @@ bool Tflow::post(bool report) {
 
   // send boxes if new
   if (post_id_ <= frame_.id) {
-    if (enc_) {
-      if (!enc_->addMessage(boxes)) {
-        dbgMsg("encoder busy\n");
+    if (tracking_) {
+      // if tracking, then send targets to tracker
+      if (trk_) {
+        if (!trk_->addMessage(boxes)) {
+          dbgMsg("tracker busy\n");
+        }
       }
-    }
-    if (trk_) {
-      if (!trk_->addMessage(boxes)) {
-        dbgMsg("tracker busy\n");
+    } else {
+      // if not tracking, then send targets to encoder
+      if (enc_) {
+        if (!enc_->addMessage(boxes)) {
+          dbgMsg("encoder busy\n");
+        }
       }
     }
     post_id_ = frame_.id;
@@ -431,16 +448,16 @@ bool Tflow::waitingToHalt() {
     // report
     if (!quiet_) {
       fprintf(stderr, "\nTflow Results...\n");
-      fprintf(stderr, "  image copy time (us): high:%u avg:%u low:%u frames%u\n", 
+      fprintf(stderr, "  image copy time (us): high:%u avg:%u low:%u cnt:%u\n", 
           differ_copy_.high, differ_copy_.avg, 
           differ_copy_.low,  differ_copy_.cnt);
-      fprintf(stderr, "  image prep time (us): high:%u avg:%u low:%u frames%u\n", 
+      fprintf(stderr, "  image prep time (us): high:%u avg:%u low:%u cnt:%u\n", 
           differ_prep_.high, differ_prep_.avg, 
           differ_prep_.low,  differ_prep_.cnt);
-      fprintf(stderr, "  image eval time (us): high:%u avg:%u low:%u frames%u\n", 
+      fprintf(stderr, "  image eval time (us): high:%u avg:%u low:%u cnt:%u\n", 
           differ_eval_.high, differ_eval_.avg, 
           differ_eval_.low,  differ_eval_.cnt);
-      fprintf(stderr, "  image post time (us): high:%u avg:%u low:%u frames%u\n", 
+      fprintf(stderr, "  image post time (us): high:%u avg:%u low:%u cnt:%u\n", 
           differ_post_.high, differ_post_.avg, 
           differ_post_.low,  differ_post_.cnt);
       fprintf(stderr, "       total test time: %f sec\n", 

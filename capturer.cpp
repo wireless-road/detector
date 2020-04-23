@@ -447,10 +447,10 @@ bool Capturer::waitingToHalt() {
     if (!quiet_) {
       fprintf(stderr, "\n\nCapturer Results...\n");
       fprintf(stderr, "   number of frames captured: %d\n", frame_cnt_); 
-      fprintf(stderr, "   tflow copy time (us): high:%u avg:%u low:%u frames%u\n", 
+      fprintf(stderr, "   tflow copy time (us): high:%u avg:%u low:%u cnt:%u\n", 
           differ_tfl_.high, differ_tfl_.avg, 
           differ_tfl_.low,  differ_tfl_.cnt);
-      fprintf(stderr, "  encode copy time (us): high:%u avg:%u low:%u frames%u\n", 
+      fprintf(stderr, "  encode copy time (us): high:%u avg:%u low:%u cnt:%u\n", 
           differ_enc_.high, differ_enc_.avg, 
           differ_enc_.low,  differ_enc_.cnt);
       fprintf(stderr, "        total test time: %f sec\n", 

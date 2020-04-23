@@ -186,12 +186,14 @@ bool Tracker::associateTracks() {
 
     // compute cost matrix
     std::vector<std::vector<double>> mat(tracks_.size(),
-        std::vector<double>(targets_.size(), 0.0));
+        std::vector<double>(targets_.size(), std::numeric_limits<double>::max()));
     for (unsigned int k = 0; k < targets_.size(); k++) {
       double mid_x = targets_[k].x + targets_[k].w / 2.0;
       double mid_y = targets_[k].y + targets_[k].h / 2.0;
       for (unsigned int i = 0; i < tracks_.size(); i++) {
-        mat[i][k] = tracks_[i].getDistance(mid_x, mid_y);
+        if (tracks_[i].type == targets_[k].type) {
+          mat[i][k] = tracks_[i].getDistance(mid_x, mid_y);
+        }
       }
     }
 
@@ -200,13 +202,14 @@ bool Tracker::associateTracks() {
     vector<int> assignments;
     hung_algo.Solve(mat, assignments);
 
-    // add targets to tracks_
+    // add targets to tracks
     for (unsigned int i = 0; i < assignments.size(); i++) {
+      int k = assignments[i];
       double mid_x = targets_[i].x + targets_[i].w / 2.0;
       double mid_y = targets_[i].y + targets_[i].h / 2.0;
       if (tracks_[i].getDistance(mid_x, mid_y) <= max_dist_) {
-        tracks_[i].addTarget(targets_[i]);
-        targets_[i].id = std::numeric_limits<unsigned int>::max();
+        tracks_[i].addTarget(targets_[k]);
+        targets_[k].id = std::numeric_limits<unsigned int>::max();
       }
     }
 

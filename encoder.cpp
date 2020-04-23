@@ -603,10 +603,10 @@ bool Encoder::waitingToHalt() {
     // report
     if (!quiet_) {
       fprintf(stderr, "\nEncoder Results...\n");
-      fprintf(stderr, "  image copy   time (us): high:%u avg:%u low:%u frames%u\n", 
+      fprintf(stderr, "  image copy   time (us): high:%u avg:%u low:%u cnt:%u\n", 
           differ_copy_.high, differ_copy_.avg, 
           differ_copy_.low,differ_copy_.cnt);
-      fprintf(stderr, "  image encode time (us): high:%u avg:%u low:%u frames%u\n", 
+      fprintf(stderr, "  image encode time (us): high:%u avg:%u low:%u cnt:%u\n", 
           differ_encode_.high, differ_encode_.avg, 
           differ_encode_.low,differ_encode_.cnt);
       fprintf(stderr, "         total test time: %f sec\n", 
