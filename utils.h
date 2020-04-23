@@ -69,6 +69,13 @@ bool drawRGBBox(unsigned int thick, unsigned char* dst,
     unsigned int x, unsigned int y, unsigned int w, unsigned int h,
     unsigned char val_r, unsigned char val_g, unsigned char val_b);
 
+bool drawRGBText(unsigned char* dst,
+    unsigned int width, unsigned int height,
+    unsigned int x, unsigned int y, const char* txt,
+    unsigned char fg_r, unsigned char fg_g, unsigned char fg_b,
+    unsigned char bg_r, unsigned char bg_g, unsigned char bg_b);
+
+
 const char* BufTypeToStr(unsigned int bt);
 const char* BufFieldToStr(unsigned int bf);
 const char* BufTimecodeTypeToStr(unsigned int tt);

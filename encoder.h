@@ -99,10 +99,11 @@ class Encoder : public Base,
         unsigned char g;
         unsigned char b;
     };
-    const Encoder::RGB red_rgb_   = {255,   0,   0};
-    const Encoder::RGB green_rgb_ = {  0, 255,   0};
-    const Encoder::RGB blue_rgb_  = {  0,   0, 255};
-    const Encoder::RGB gray_rgb_  = {128, 128, 128};
+    const Encoder::RGB red_rgb_  { 255,   0,   0 };
+    const Encoder::RGB green_rgb_{   0, 255,   0 };
+    const Encoder::RGB blue_rgb_ {   0,   0, 255 };
+    const Encoder::RGB gray_rgb_ { 128, 128, 128 };
+    const Encoder::RGB white_rgb_{ 255, 255, 255 };
 
     FILE* fd_enc_;
 
@@ -147,7 +148,7 @@ class Encoder : public Base,
     MicroDiffer<uint32_t> differ_tot_;
 
     template<typename T>
-    void drawBoxes(unsigned int thickness, 
+    void drawBoxes(bool show_id, unsigned int thickness, 
         unsigned int width, unsigned int height, 
         unsigned char* data, T& vec) {
       std::for_each(vec->begin(), vec->end(),
@@ -164,6 +165,14 @@ class Encoder : public Base,
                 width, height,
                 box.x, box.y, box.w, box.h,
                 rgb.r, rgb.g, rgb.b);
+            if (show_id) {
+              std::string str;
+              str += "ID: " + std::to_string(box.id);
+              drawRGBText(data, width, height,
+                  box.x + thickness, box.y + thickness, str.c_str(),
+                  white_rgb_.r, white_rgb_.g, white_rgb_.b,
+                  rgb.r, rgb.g, rgb.b);
+            }
           }
       );  
     }
@@ -174,7 +183,7 @@ class Encoder : public Base,
     std::timed_mutex tracks_lock_;
     std::shared_ptr<std::vector<TrackBuf>> tracks_;
 
-    const unsigned int thickness_ = 4;
+    const unsigned int thickness_ = 2;
 
 #ifdef OUTPUT_VARIOUS_BITS_OF_INFO
     void printDef(OMX_PARAM_PORTDEFINITIONTYPE def);

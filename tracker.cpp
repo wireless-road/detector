@@ -28,7 +28,7 @@
 #include <limits>
 
 #include "tracker.h"
-#include "third_party/Hungarian.h"
+#include "third_party/Hungarian/Hungarian.h"
 
 namespace detector {
 

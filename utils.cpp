@@ -18,6 +18,8 @@
 
 #include "utils.h"
 
+#include "third_party/font8x8/font8x8_basic.h"
+
 namespace detector {
 
 static void yuv420_to_yuv420(
@@ -386,6 +388,46 @@ bool drawRGBBox(unsigned int thick,
   drawRGBVerticalLine(thick, start, h, width, val_r, val_g, val_b);
   start += (w - thick);
   drawRGBVerticalLine(thick, start, h, width, val_r, val_g, val_b);
+
+  return true;
+}
+
+bool drawRGBText(unsigned char* dst,
+    unsigned int width, unsigned int height,
+    unsigned int x, unsigned int y, const char* txt,
+    unsigned char fg_r, unsigned char fg_g, unsigned char fg_b,
+    unsigned char bg_r, unsigned char bg_g, unsigned char bg_b) {
+
+  if (!dst) {
+    return false;
+  }
+  if (width == 0 || height == 0) {
+    return true;
+  }
+  if (!txt || *txt == 0) {
+    return true;
+  }
+
+  unsigned int size_rgb = sizeof(struct draw_rgb);
+  unsigned int stride_y = width * size_rgb;
+
+  for (int i = 0; *txt; i++) {
+
+    char* bitmap = font8x8_basic[(int)*txt];
+    struct draw_rgb* start = (struct draw_rgb*)(dst + (y * stride_y) + (x * size_rgb) + (i * size_rgb * 8));
+
+    for (int row = 0; row < 8; row++) {
+      for (int col = 0; col < 8; col++) {
+        int set = bitmap[row] & 1 << col;
+        struct draw_rgb* p = start + col;
+        p->r = set ? fg_r : bg_r;
+        p->g = set ? fg_g : bg_g;
+        p->b = set ? fg_b : bg_b;
+      }
+      start += width;
+    }
+    txt++;
+  }
 
   return true;
 }

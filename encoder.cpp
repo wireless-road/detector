@@ -430,7 +430,7 @@ void Encoder::overlay(std::shared_ptr<Encoder::Frame>& frame) {
       if (targets_ != nullptr) {
         if (targets_->size() != 0) {
           drawBoxes<std::shared_ptr<std::vector<BoxBuf>>>(
-              thickness_, width_, height_, frame->buf.data(), targets_);
+              false, thickness_, width_, height_, frame->buf.data(), targets_);
         }
       }
     }
@@ -443,7 +443,7 @@ void Encoder::overlay(std::shared_ptr<Encoder::Frame>& frame) {
       if (tracks_ != nullptr) {
         if (tracks_->size() != 0) {
           drawBoxes<std::shared_ptr<std::vector<TrackBuf>>>(
-              thickness_, width_, height_, frame->buf.data(), tracks_);
+              true, thickness_, width_, height_, frame->buf.data(), tracks_);
         }
       }
     }
