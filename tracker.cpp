@@ -46,7 +46,7 @@ const Eigen::Matrix<double, 2, 6> Tracker::Track::H_{
 };
 
 Tracker::Track::Track(unsigned int track_id, const BoxBuf& box)
-  : id(track_id), frm(box.id), 
+  : id(track_id), frm(box.id), type(box.type),
     x(box.x), y(box.y), w(box.w), h(box.h) {
 
   state_ = Tracker::Track::State::kInit;

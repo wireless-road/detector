@@ -121,7 +121,7 @@ bool Encoder::addMessage(std::shared_ptr<std::vector<TrackBuf>>& tracks) {
   std::unique_lock<std::timed_mutex> lck(tracks_lock_, std::defer_lock);
 
   if (!lck.try_lock_for(
-        std::chrono::microseconds(Listener<std::shared_ptr<std::vector<BoxBuf>>>::timeout_))) {
+        std::chrono::microseconds(Listener<std::shared_ptr<std::vector<TrackBuf>>>::timeout_))) {
     dbgMsg("encoder track lock busy\n");
     return false;
   }
@@ -420,32 +420,52 @@ bool Encoder::waitingToRun() {
   return true;
 }
 
-void Encoder::overlay(std::shared_ptr<Encoder::Frame> frame) {
+void Encoder::overlay(std::shared_ptr<Encoder::Frame>& frame) {
 
-  std::unique_lock<std::timed_mutex> tlck(targets_lock_);
-
-  if (targets_ != nullptr) {
-    if (targets_->size() != 0) {
-      std::for_each(targets_->begin(), targets_->end(),
-          [=](BoxBuf const & box) {
-          Encoder::RGB rgb;
-            if (box.type == BoxBuf::Type::kPerson) {
-              rgb = red_rgb_;
-            } else if (box.type == BoxBuf::Type::kPet) {
-              rgb = green_rgb_;
-            } else if (box.type == BoxBuf::Type::kVehicle) {
-              rgb = blue_rgb_;
-            } else {
-              rgb = gray_rgb_;
+  // targets
+  {
+    std::unique_lock<std::timed_mutex> tlck(targets_lock_);
+    if (targets_ != nullptr) {
+      if (targets_->size() != 0) {
+        std::for_each(targets_->begin(), targets_->end(),
+            [&](const BoxBuf& box) {
+              if (box.type == BoxBuf::Type::kUnknown) {
+                drawRGBBox(thickness_, frame->buf.data(), 
+                    width_, height_,
+                    box.x, box.y, box.w, box.h,
+                    gray_rgb_.r, gray_rgb_.g, gray_rgb_.b);
+              }
             }
-            drawRGBBox(thickness_, frame->buf.data(), 
-                width_, height_,
-                box.x, box.y, box.w, box.h,
-                rgb.r, rgb.g, rgb.b);
-          }
-      );
+        );
+      }
     }
   }
+
+  // tracks
+  {
+    std::unique_lock<std::timed_mutex> tlck(tracks_lock_);
+    if (tracks_ != nullptr) {
+      if (tracks_->size() != 0) {
+        std::for_each(tracks_->begin(), tracks_->end(),
+            [&](const TrackBuf& track) {
+              Encoder::RGB rgb = gray_rgb_;
+              if (track.type == BoxBuf::Type::kPerson) {
+                rgb = red_rgb_;
+              } else if (track.type == BoxBuf::Type::kPet) {
+                rgb = green_rgb_;
+              } else if (track.type == BoxBuf::Type::kVehicle) {
+                rgb = blue_rgb_;
+              }
+              drawRGBBox(thickness_, frame->buf.data(), 
+                  width_, height_,
+                  track.x, track.y, track.w, track.h,
+                  rgb.r, rgb.g, rgb.b);
+            }
+        );
+      }
+    }
+  }
+
 }
 
 bool Encoder::running() {

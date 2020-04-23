@@ -136,7 +136,7 @@ class Encoder : public Base,
     std::queue<std::shared_ptr<Encoder::Frame>> frame_pool_;
     std::queue<std::shared_ptr<Encoder::Frame>> frame_work_;
 
-    void overlay(std::shared_ptr<Encoder::Frame> frame);
+    void overlay(std::shared_ptr<Encoder::Frame>& frame);
 
     std::atomic<bool> encode_on_;
 

@@ -181,7 +181,7 @@ int main(int argc, char** argv) {
   }
   enc = Encoder::create(yield_time, quiet, rtsp.get(), framerate, 
       std::abs(wdth), std::abs(hght), bitrate, output, testtime);
-  trk = Tracker::create(yield_time, quiet, enc.get(), 50.0, 50);
+  trk = Tracker::create(yield_time, quiet, enc.get(), 200.0, 50);
   tfl = Tflow::create(2*yield_time, quiet, enc.get(), trk.get(), std::abs(wdth), 
       std::abs(hght), model.c_str(), labels.c_str(), threads, threshold, tpu);
   cap = Capturer::create(yield_time, quiet, enc.get(), tfl.get(), 

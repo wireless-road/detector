@@ -6,6 +6,7 @@
        "name": "C++ Launch",
        "type": "cppdbg",
        "request": "launch",
+       "targetArchitecture": "arm",
        "program": "${workspaceRoot}/detector",
        "args": [],
        //"preLaunchTask": "launch gdbserver",
