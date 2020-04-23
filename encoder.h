@@ -50,7 +50,7 @@ class Encoder : public Base,
   Listener<std::shared_ptr<std::vector<BoxBuf>>>,
   Listener<std::shared_ptr<std::vector<TrackBuf>>> {
   public:
-    static std::unique_ptr<Encoder> create(unsigned int yield_time, bool quiet, 
+    static std::unique_ptr<Encoder> create(unsigned int yield_time, bool quiet, bool tracking,
         Rtsp* rtsp, unsigned int framerate, unsigned int width, unsigned int height, 
         unsigned int bitrate, std::string& output, unsigned int testtime);
     virtual ~Encoder();
@@ -60,10 +60,11 @@ class Encoder : public Base,
     virtual bool addMessage(std::shared_ptr<std::vector<BoxBuf>>& targets);
     virtual bool addMessage(std::shared_ptr<std::vector<TrackBuf>>& tracks);
 
+    
   protected:
     Encoder() = delete;
     Encoder(unsigned int yield_time);
-    bool init(bool quiet, Rtsp* rtsp, unsigned int framerate, unsigned int width,
+    bool init(bool quiet, bool tracking, Rtsp* rtsp, unsigned int framerate, unsigned int width,
         unsigned int height, unsigned int bitrate, std::string& output, 
         unsigned int testtime);
 
@@ -75,6 +76,7 @@ class Encoder : public Base,
 
   private:
     bool quiet_;
+    bool tracking_;
     Rtsp* rtsp_;
     unsigned int framerate_;
     unsigned int width_;
@@ -143,6 +145,28 @@ class Encoder : public Base,
     MicroDiffer<uint32_t> differ_copy_;
     MicroDiffer<uint32_t> differ_encode_;
     MicroDiffer<uint32_t> differ_tot_;
+
+    template<typename T>
+    void drawBoxes(unsigned int thickness, 
+        unsigned int width, unsigned int height, 
+        unsigned char* data, T& vec) {
+      std::for_each(vec->begin(), vec->end(),
+          [&](const BoxBuf& box) {
+            Encoder::RGB rgb = gray_rgb_;
+            if (box.type == BoxBuf::Type::kPerson) {
+              rgb = red_rgb_;
+            } else if (box.type == BoxBuf::Type::kPet) {
+              rgb = green_rgb_;
+            } else if (box.type == BoxBuf::Type::kVehicle) {
+              rgb = blue_rgb_;
+            }
+            drawRGBBox(thickness, data, 
+                width, height,
+                box.x, box.y, box.w, box.h,
+                rgb.r, rgb.g, rgb.b);
+          }
+      );  
+    }
 
     std::timed_mutex targets_lock_;
     std::shared_ptr<std::vector<BoxBuf>> targets_;

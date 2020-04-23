@@ -40,19 +40,20 @@ Encoder::Encoder(unsigned int yield_time)
 Encoder::~Encoder() {
 }
 
-std::unique_ptr<Encoder> Encoder::create(unsigned int yield_time, bool quiet, 
+std::unique_ptr<Encoder> Encoder::create(unsigned int yield_time, bool quiet, bool tracking_, 
     Rtsp* rtsp, unsigned int framerate, unsigned int width, unsigned int height, 
     unsigned int bitrate, std::string& output, unsigned int testtime) {
   auto obj = std::unique_ptr<Encoder>(new Encoder(yield_time));
-  obj->init(quiet, rtsp, framerate, width, height, bitrate, output, testtime);
+  obj->init(quiet, tracking_, rtsp, framerate, width, height, bitrate, output, testtime);
   return obj;
 }
 
-bool Encoder::init(bool quiet, Rtsp* rtsp, unsigned int framerate, 
+bool Encoder::init(bool quiet, bool tracking_, Rtsp* rtsp, unsigned int framerate, 
     unsigned int width, unsigned int height, unsigned int bitrate, 
     std::string& output, unsigned int testtime) {
 
   quiet_ = quiet;
+  tracking_ = tracking_;
   rtsp_ = rtsp;
   framerate_ = framerate;
   width_ = width;
@@ -425,18 +426,12 @@ void Encoder::overlay(std::shared_ptr<Encoder::Frame>& frame) {
   // targets
   {
     std::unique_lock<std::timed_mutex> lck(targets_lock_);
-    if (targets_ != nullptr) {
-      if (targets_->size() != 0) {
-        std::for_each(targets_->begin(), targets_->end(),
-            [&](const BoxBuf& box) {
-              if (box.type == BoxBuf::Type::kUnknown) {
-                drawRGBBox(thickness_, frame->buf.data(), 
-                    width_, height_,
-                    box.x, box.y, box.w, box.h,
-                    gray_rgb_.r, gray_rgb_.g, gray_rgb_.b);
-              }
-            }
-        );
+    if (!tracking_) {
+      if (targets_ != nullptr) {
+        if (targets_->size() != 0) {
+          drawBoxes<std::shared_ptr<std::vector<BoxBuf>>>(
+              thickness_, width_, height_, frame->buf.data(), targets_);
+        }
       }
     }
   }
@@ -444,24 +439,12 @@ void Encoder::overlay(std::shared_ptr<Encoder::Frame>& frame) {
   // tracks
   {
     std::unique_lock<std::timed_mutex> lck(tracks_lock_);
-    if (tracks_ != nullptr) {
-      if (tracks_->size() != 0) {
-        std::for_each(tracks_->begin(), tracks_->end(),
-            [&](const TrackBuf& track) {
-              Encoder::RGB rgb = gray_rgb_;
-              if (track.type == BoxBuf::Type::kPerson) {
-                rgb = red_rgb_;
-              } else if (track.type == BoxBuf::Type::kPet) {
-                rgb = green_rgb_;
-              } else if (track.type == BoxBuf::Type::kVehicle) {
-                rgb = blue_rgb_;
-              }
-              drawRGBBox(thickness_, frame->buf.data(), 
-                  width_, height_,
-                  track.x, track.y, track.w, track.h,
-                  rgb.r, rgb.g, rgb.b);
-            }
-        );
+    if (tracking_) {
+      if (tracks_ != nullptr) {
+        if (tracks_->size() != 0) {
+          drawBoxes<std::shared_ptr<std::vector<TrackBuf>>>(
+              thickness_, width_, height_, frame->buf.data(), tracks_);
+        }
       }
     }
   }

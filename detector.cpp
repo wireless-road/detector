@@ -41,7 +41,7 @@ std::unique_ptr<Tflow>    tfl(nullptr);
 std::unique_ptr<Tracker>  trk(nullptr);
 
 void usage() {
-  std::cout << "detector -?qprutdfwhbyesml [output]" << std::endl;
+  std::cout << "detector -?qpkrutdfwhbyesml [output]" << std::endl;
   std::cout << "version: 1.0"                     << std::endl;
   std::cout                                       << std::endl;
   std::cout << "  where:"                         << std::endl;
@@ -58,15 +58,16 @@ void usage() {
   std::cout << "               = negative value means flip"             << std::endl;
   std::cout << "  (h)eight     = capture height      (default = 480)"   << std::endl;
   std::cout << "               = negative value means flip"             << std::endl;
-  std::cout << "  (b)itrate    = encoder bitrate     (default = 1000000)" << std::endl;
+  std::cout << "  (b)itrate    = encoder bitrate     (default = 1000000)"  << std::endl;
   std::cout << "  (y)ield time = yield time          (default = 1000usec)" << std::endl;
-  std::cout << "  thr(e)ads    = number of tflow threads (default = 1)"   << std::endl;
-  std::cout << "  thre(s)hold  = object detect threshold (default = 0.5)" << std::endl;
+  std::cout << "  thr(e)ads    = number of tflow threads (default = 1)"    << std::endl;
+  std::cout << "  thre(s)hold  = object detect threshold (default = 0.5)"  << std::endl;
   std::cout << "  t(p)u        = use Edge TPU        (default = false)" << std::endl;
-  std::cout << "  (m)odel      = path to model       (default = ./models/detect.tflite)" << std::endl;
+  std::cout << "  trac(k)ing   = track targets       (default = false)" << std::endl;
+  std::cout << "  (m)odel      = path to model       (default = ./models/detect.tflite)"         << std::endl;
   std::cout << "                                     (default = ./models/edgetpu_detect.tflite)" << std::endl;
-  std::cout << "  (l)abels     = path to labels      (default = ./models/labels.txt)" << std::endl;
-  std::cout << "                                     (default = ./models/edgetpu_labels.txt)" << std::endl;
+  std::cout << "  (l)abels     = path to labels      (default = ./models/labels.txt)"            << std::endl;
+  std::cout << "                                     (default = ./models/edgetpu_labels.txt)"    << std::endl;
   std::cout << "  (o)utput     = output file name"                      << std::endl;
   std::cout << "               = no output if testtime is 0"            << std::endl;
 }
@@ -93,6 +94,7 @@ int main(int argc, char** argv) {
   bool quiet = false;
   bool streaming = false;
   bool tpu = false;
+  bool tracking = false;
   std::string  unicast;
   unsigned int yield_time = 1000;
   unsigned int testtime = 30;
@@ -109,11 +111,12 @@ int main(int argc, char** argv) {
 
   // cmd line options
   int c;
-  while((c = getopt(argc, argv, ":qrpu:t:d:f:w:h:b:y:e:s:m:l:o:")) != -1) {
+  while((c = getopt(argc, argv, ":qrpku:t:d:f:w:h:b:y:e:s:m:l:o:")) != -1) {
     switch (c) {
       case 'q': quiet     = true;               break;
       case 'r': streaming = true;               break;
       case 'p': tpu       = true;               break;
+      case 'k': tracking  = true;               break;
       case 'u': unicast   = optarg;             break;
       case 't': testtime  = std::stoul(optarg); break;
       case 'd': device    = std::stoul(optarg); break;
@@ -169,6 +172,7 @@ int main(int argc, char** argv) {
     fprintf(stderr, "     threads: %d\n", threads);
     fprintf(stderr, "   threshold: %f\n", threshold);
     fprintf(stderr, "     use tpu: %s\n", tpu ? "yes" : "no");
+    fprintf(stderr, "    tracking: %s\n", tracking ? "yes" : "no");
     fprintf(stderr, "       model: %s\n", model.c_str());
     fprintf(stderr, "      lables: %s\n", labels.c_str());
     fprintf(stderr, "      output: %s\n\n", (testtime == 0) ? "none" : output.c_str());
@@ -179,9 +183,12 @@ int main(int argc, char** argv) {
   if (streaming) { 
     rtsp = Rtsp::create(yield_time, quiet, bitrate, framerate, unicast); 
   }
-  enc = Encoder::create(yield_time, quiet, rtsp.get(), framerate, 
+  enc = Encoder::create(yield_time, quiet, tracking, rtsp.get(), framerate, 
       std::abs(wdth), std::abs(hght), bitrate, output, testtime);
-  trk = Tracker::create(yield_time, quiet, enc.get(), 200.0, 50);
+  if (tracking) {
+    double dist = std::sqrt(std::pow(wdth, 2) + std::pow(hght, 2)) / 10.0;
+    trk = Tracker::create(yield_time, quiet, enc.get(), dist, 2*framerate);
+  }
   tfl = Tflow::create(2*yield_time, quiet, enc.get(), trk.get(), std::abs(wdth), 
       std::abs(hght), model.c_str(), labels.c_str(), threads, threshold, tpu);
   cap = Capturer::create(yield_time, quiet, enc.get(), tfl.get(), 
@@ -191,7 +198,7 @@ int main(int argc, char** argv) {
   dbgMsg("start\n");
   if (streaming) { rtsp->start("rtsp", 90); }
   enc->start("enc", 50);
-  trk->start("trk", 20);
+  if (tracking) { trk->start("trk", 20); }
   tfl->start("tfl", 20);
   cap->start("cap", 90);
 
@@ -199,7 +206,7 @@ int main(int argc, char** argv) {
   dbgMsg("run\n");
   if (streaming) { rtsp->run(); }
   enc->run();
-  trk->run();
+  if (tracking) { trk->run(); }
   tfl->run();
   cap->run();
 
@@ -225,7 +232,7 @@ int main(int argc, char** argv) {
   dbgMsg("stop\n");
   cap->stop();
   tfl->stop();
-  trk->stop();
+  if (tracking) { trk->stop(); }
   enc->stop();
   if (streaming) { rtsp->stop(); }
 
