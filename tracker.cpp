@@ -189,10 +189,16 @@ bool Tracker::waitingToRun() {
 }
 
 bool Tracker::untouchTracks() {
+
+  differ_untouch_.begin();
+
   std::for_each(tracks_.begin(), tracks_.end(), 
       [](Tracker::Track& track) {
         track.touched = false;
         });
+
+  differ_untouch_.end();
+
   return true;
 }
 
@@ -248,6 +254,7 @@ bool Tracker::associateTracks() {
 bool Tracker::createNewTracks() {
 
   differ_create_.begin();
+
   if (targets_.size()) {
     std::for_each(targets_.begin(), targets_.end(),
         [&](const BoxBuf& b) {
@@ -263,12 +270,16 @@ bool Tracker::createNewTracks() {
 }
 
 bool Tracker::touchTracks() {
+  differ_touch_.begin();
+
   std::for_each(tracks_.begin(), tracks_.end(),
       [&](Tracker::Track& track) {
         if (!track.touched) {
           track.updateTime();
         }
       });
+
+  differ_touch_.end();
   return true;
 }
 
