@@ -187,7 +187,7 @@ int main(int argc, char** argv) {
       std::abs(wdth), std::abs(hght), bitrate, output, testtime);
   if (tracking) {
     double dist = std::sqrt(std::pow(wdth, 2) + std::pow(hght, 2)) / 5.0;
-    trk = Tracker::create(yield_time, quiet, enc.get(), dist, 2*framerate);
+    trk = Tracker::create(yield_time, quiet, enc.get(), dist, 2000);
   }
   tfl = Tflow::create(2*yield_time, quiet, enc.get(), trk.get(), std::abs(wdth), 
       std::abs(hght), model.c_str(), labels.c_str(), threads, threshold, tpu);

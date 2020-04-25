@@ -25,6 +25,7 @@
 #include <thread>
 #include <mutex>
 #include <set>
+#include <chrono>
 
 #include "utils.h"
 #include "listener.h"
@@ -60,9 +61,10 @@ class Tracker : public Base, Listener<std::shared_ptr<std::vector<BoxBuf>>> {
 
       public:
         unsigned int id;
-        unsigned int frm;
+        std::chrono::steady_clock::time_point stamp;
         BoxBuf::Type type;
         double x, y, w, h;
+        bool touched;
 
       private:
         Track::State state_{Track::State::kInit};
@@ -85,7 +87,7 @@ class Tracker : public Base, Listener<std::shared_ptr<std::vector<BoxBuf>>> {
 
   public:
     static std::unique_ptr<Tracker> create(unsigned int yield_time, bool quiet, 
-        Encoder* enc, double max_dist, unsigned max_frm);
+        Encoder* enc, double max_dist, unsigned int max_time);
     virtual ~Tracker();
 
   public:
@@ -94,7 +96,7 @@ class Tracker : public Base, Listener<std::shared_ptr<std::vector<BoxBuf>>> {
   protected:
     Tracker() = delete;
     Tracker(unsigned int yield_time);
-    bool init(bool quiet, Encoder* enc, double max_dist, unsigned int max_frm);
+    bool init(bool quiet, Encoder* enc, double max_dist, unsigned int max_time);
 
   protected:
     virtual bool waitingToRun();
@@ -106,9 +108,8 @@ class Tracker : public Base, Listener<std::shared_ptr<std::vector<BoxBuf>>> {
     bool quiet_;
     Encoder* enc_;
     double max_dist_;
-    unsigned int max_frm_;
+    unsigned int max_time_;
 
-    unsigned int current_frm_;
     unsigned int track_cnt_;
     std::vector<Track> tracks_;
 
@@ -128,8 +129,10 @@ class Tracker : public Base, Listener<std::shared_ptr<std::vector<BoxBuf>>> {
 
     std::atomic<bool> tracker_on_;
 
+    bool untouchTracks();
     bool associateTracks();
     bool createNewTracks();
+    bool touchTracks();
     bool cleanupTracks();
     bool postTracks();
 };

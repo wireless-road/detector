@@ -46,9 +46,11 @@ const Eigen::Matrix<double, 2, 6> Tracker::Track::H_{
 };
 
 Tracker::Track::Track(unsigned int track_id, const BoxBuf& box)
-  : id(track_id), frm(box.id), type(box.type),
-    x(box.x), y(box.y), w(box.w), h(box.h) {
+  : id(track_id), type(box.type),
+    x(box.x), y(box.y), w(box.w), h(box.h),
+    touched(true) {
 
+  stamp = std::chrono::steady_clock::now();
   state_ = Tracker::Track::State::kInit;
 
   // initialize state vector with inital position
@@ -78,6 +80,9 @@ Tracker::Track::Track(unsigned int track_id, const BoxBuf& box)
 }
 
 void Tracker::Track::updateTime() {
+
+  touched = true;
+
   //  predict state transition
   X_ = A_ * X_;
 
@@ -102,7 +107,7 @@ double Tracker::Track::getDistance(double mid_x, double mid_y) {
 
 void Tracker::Track::addTarget(const BoxBuf& box) {
 
-  frm = box.id;
+  stamp = std::chrono::steady_clock::now();
   x = box.x;
   y = box.y;
   w = box.w;
@@ -132,20 +137,19 @@ Tracker::~Tracker() {
 
 std::unique_ptr<Tracker> Tracker::create(
     unsigned int yield_time, bool quiet, 
-    Encoder* enc, double max_dist, unsigned int max_frm) {
+    Encoder* enc, double max_dist, unsigned int max_time) {
   auto obj = std::unique_ptr<Tracker>(new Tracker(yield_time));
-  obj->init(quiet, enc, max_dist, max_frm);
+  obj->init(quiet, enc, max_dist, max_time);
   return obj;
 }
 
-bool Tracker::init(bool quiet, Encoder* enc, double max_dist, unsigned int max_frm) {
+bool Tracker::init(bool quiet, Encoder* enc, double max_dist, unsigned int max_time) {
 
   quiet_ = quiet;
   enc_ = enc;
   max_dist_ = max_dist;
-  max_frm_ = max_frm;
+  max_time_ = max_time;
 
-  current_frm_ = 0;
   track_cnt_ = 0;
 
   tracker_on_ = false;
@@ -181,6 +185,14 @@ bool Tracker::waitingToRun() {
     tracker_on_ = true;
   }
 
+  return true;
+}
+
+bool Tracker::untouchTracks() {
+  std::for_each(tracks_.begin(), tracks_.end(), 
+      [](Tracker::Track& track) {
+        track.touched = false;
+        });
   return true;
 }
 
@@ -237,7 +249,7 @@ bool Tracker::createNewTracks() {
 
   differ_create_.begin();
   if (targets_.size()) {
-    for_each(targets_.begin(), targets_.end(),
+    std::for_each(targets_.begin(), targets_.end(),
         [&](const BoxBuf& b) {
           tracks_.push_back(Tracker::Track(track_cnt_, b));
           track_cnt_ += 1;
@@ -251,25 +263,32 @@ bool Tracker::createNewTracks() {
   return true;
 }
 
+bool Tracker::touchTracks() {
+  std::for_each(tracks_.begin(), tracks_.end(),
+      [&](Tracker::Track& track) {
+        if (!track.touched) {
+          track.updateTime();
+        }
+      });
+  return true;
+}
+
 bool Tracker::cleanupTracks() {
 
   differ_cleanup_.begin();
+
+  auto now = std::chrono::steady_clock::now();
 
   // remove old tracks
   tracks_.erase(
       std::remove_if(tracks_.begin(), tracks_.end(),
         [&] (const Tracker::Track& t) {
-          return max_frm_ < current_frm_ - t.frm;;
+          using namespace std::chrono;
+          duration<unsigned int,std::milli> span = 
+            duration_cast<duration<unsigned int,std::milli>>(now - t.stamp);
+          return max_time_ < span.count();
         }), 
       tracks_.end());
-
-  // update unused tracks
-  for_each(tracks_.begin(), tracks_.end(),
-      [&](Tracker::Track& track) {
-        if (track.frm != current_frm_) {
-          track.updateTime();
-        }
-      });
 
   differ_cleanup_.end();
 
@@ -282,7 +301,7 @@ bool Tracker::postTracks() {
 
   auto tracks = std::make_shared<std::vector<TrackBuf>>();
 
-  for_each(tracks_.begin(), tracks_.end(),
+  std::for_each(tracks_.begin(), tracks_.end(),
       [&](const Tracker::Track& t) {
         tracks->push_back(TrackBuf(
               t.type, t.id,
@@ -304,13 +323,12 @@ bool Tracker::running() {
   if (tracker_on_) {
 
     std::unique_lock<std::timed_mutex> lck(targets_lock_);
-    if (targets_.size() != 0) {
 
-      // all frame ids are the same in a target collection
-      // so it is safe to pick off the first one
-      current_frm_ = targets_[0].id;  
+    if (targets_.size() != 0) {
+      untouchTracks();
       associateTracks();
       createNewTracks();
+      touchTracks();
     }
 
     cleanupTracks();
