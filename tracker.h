@@ -114,8 +114,10 @@ class Tracker : public Base, Listener<std::shared_ptr<std::vector<BoxBuf>>> {
     std::vector<Track> tracks_;
 
     MicroDiffer<uint32_t> differ_tot_;
+    MicroDiffer<uint32_t> differ_untouch_;
     MicroDiffer<uint32_t> differ_associate_;
     MicroDiffer<uint32_t> differ_create_;
+    MicroDiffer<uint32_t> differ_touch_;
     MicroDiffer<uint32_t> differ_cleanup_;
     MicroDiffer<uint32_t> differ_post_;
 

@@ -251,8 +251,7 @@ bool Tracker::createNewTracks() {
   if (targets_.size()) {
     std::for_each(targets_.begin(), targets_.end(),
         [&](const BoxBuf& b) {
-          tracks_.push_back(Tracker::Track(track_cnt_, b));
-          track_cnt_ += 1;
+          tracks_.push_back(Tracker::Track(++track_cnt_, b));
         });
   }
 
@@ -350,18 +349,25 @@ bool Tracker::waitingToHalt() {
 
     if (!quiet_) {
       fprintf(stderr, "\nTracker Results...\n");
+      fprintf(stderr, "      target untouch time (us): high:%u avg:%u low:%u cnt:%u\n", 
+          differ_untouch_.high, differ_untouch_.avg, 
+          differ_untouch_.low,  differ_untouch_.cnt);
       fprintf(stderr, "  target association time (us): high:%u avg:%u low:%u cnt:%u\n", 
           differ_associate_.high, differ_associate_.avg, 
           differ_associate_.low,  differ_associate_.cnt);
       fprintf(stderr, "        track create time (us): high:%u avg:%u low:%u cnt:%u\n", 
           differ_create_.high, differ_create_.avg, 
           differ_create_.low,  differ_create_.cnt);
+      fprintf(stderr, "        target touch time (us): high:%u avg:%u low:%u cnt:%u\n", 
+          differ_touch_.high, differ_touch_.avg, 
+          differ_touch_.low,  differ_touch_.cnt);
       fprintf(stderr, "       track cleanup time (us): high:%u avg:%u low:%u cnt:%u\n", 
           differ_cleanup_.high, differ_cleanup_.avg, 
           differ_cleanup_.low,  differ_cleanup_.cnt);
       fprintf(stderr, "          track post time (us): high:%u avg:%u low:%u cnt:%u\n", 
           differ_post_.high, differ_post_.avg, 
           differ_post_.low,  differ_post_.cnt);
+      fprintf(stderr, "                  total tracks: %u\n", track_cnt_);
       fprintf(stderr, "               total test time: %f sec\n", 
           differ_tot_.avg / 1000000.f);
       fprintf(stderr, "\n");
