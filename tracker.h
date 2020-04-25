@@ -56,6 +56,7 @@ class Tracker : public Base, Listener<std::shared_ptr<std::vector<BoxBuf>>> {
       public:
         double getDistance(double mid_x, double mid_y);
         void addTarget(const BoxBuf& box);
+        void updateTime();
 
       public:
         unsigned int id;
@@ -79,7 +80,6 @@ class Tracker : public Base, Listener<std::shared_ptr<std::vector<BoxBuf>>> {
         Eigen::Matrix<double, 6, 6> Q_;
         Eigen::Matrix<double, 2, 1> Z_;
 
-        void updateTime();
         void updateMeasure();
     };
 

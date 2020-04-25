@@ -192,7 +192,7 @@ bool Tracker::associateTracks() {
 
     // compute cost matrix
     std::vector<std::vector<double>> mat(tracks_.size(),
-        std::vector<double>(targets_.size(), std::numeric_limits<double>::max()));
+        std::vector<double>(targets_.size(), 1.0e7));
     for (unsigned int k = 0; k < targets_.size(); k++) {
       double mid_x = targets_[k].x + targets_[k].w / 2.0;
       double mid_y = targets_[k].y + targets_[k].h / 2.0;
@@ -203,7 +203,7 @@ bool Tracker::associateTracks() {
       }
     }
 
-    // assign targets to tracks_
+    // assign targets to tracks
     HungarianAlgorithm hung_algo;
     vector<int> assignments;
     hung_algo.Solve(mat, assignments);
@@ -263,6 +263,14 @@ bool Tracker::cleanupTracks() {
         }), 
       tracks_.end());
 
+  // update unused tracks
+  for_each(tracks_.begin(), tracks_.end(),
+      [&](Tracker::Track& track) {
+        if (track.frm != current_frm_) {
+          track.updateTime();
+        }
+      });
+
   differ_cleanup_.end();
 
   return true;
@@ -301,15 +309,12 @@ bool Tracker::running() {
       // all frame ids are the same in a target collection
       // so it is safe to pick off the first one
       current_frm_ = targets_[0].id;  
-
       associateTracks();
-
       createNewTracks();
-
-      cleanupTracks();
-
-      postTracks();
     }
+
+    cleanupTracks();
+    postTracks();
   }
 
   return true;
