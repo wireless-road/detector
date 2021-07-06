@@ -123,7 +123,7 @@ bool Tflow::waitingToRun() {
       tflite::ops::builtin::BuiltinOpResolver resolver;
       tflite::InterpreterBuilder builder(*model_, resolver);
       builder(&model_interpreter_);
-      model_interpreter_->UseNNAPI(false);
+      //model_interpreter_->UseNNAPI(false);
       model_interpreter_->SetNumThreads(model_threads_);
     }
     model_interpreter_->AllocateTensors();
@@ -176,7 +176,7 @@ bool Tflow::waitingToRun() {
       resize_interpreter_->SetExternalContext(kTfLiteEdgeTpuContext, edgetpu_context_.get());
       resize_interpreter_->SetNumThreads(1);
     } else {
-      resize_interpreter_->UseNNAPI(false);
+      //resize_interpreter_->UseNNAPI(false);
       resize_interpreter_->SetNumThreads(model_threads_);
     }
     resize_interpreter_->AllocateTensors();

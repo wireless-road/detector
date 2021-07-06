@@ -1,7 +1,6 @@
 # environment variables:
 #   RASPBIAN is the location of your raspbian projects
 #   RASPBIANCROSS is the location of the raspbian compiler tools
-#   LIBYUV is the location of your libyuv
 #   OMXSUPPORT is the location of your 'video core' support (OMX and such)
 #   TFLOWLITESDK is the location of your 'tensorflow-lite' sdk
 
@@ -35,15 +34,29 @@ CFLAGS += -O3
 
 LDFLAGS = \
 	-L$(OMXSUPPORT)/lib \
-	-L$(LIBYUV) \
 	-L$(LIVE555)/liveMedia \
 	-L$(LIVE555)/UsageEnvironment \
 	-L$(LIVE555)/BasicUsageEnvironment \
 	-L$(LIVE555)/groupsock \
-	-L$(TFLOWSDK)/tensorflow/lite/tools/make/gen/rpi_armv7l/lib \
+	-L$(TFLOWSDK)/build \
+	-L$(TFLOWSDK)/build/_deps/xnnpack-build \
+	-L$(TFLOWSDK)/build/cpuinfo \
+	-L$(TFLOWSDK)/build/clog \
+	-L$(TFLOWSDK)/build/pthreadpool \
+	-L$(TFLOWSDK)/build/_deps/ruy-build \
+	-L$(TFLOWSDK)/build/_deps/flatbuffers-build \
+	-L$(TFLOWSDK)/build/_deps/fft2d-build \
+	-L$(TFLOWSDK)/build/_deps/farmhash-build \
 	-L$(EDGETPUSDK)/libedgetpu/direct/armv7a
 
-LIBS = -ltensorflow-lite -lliveMedia -lgroupsock -lBasicUsageEnvironment -lUsageEnvironment 
+LIBS = -ltensorflow-lite
+LIBS += -lXNNPACK -lcpuinfo -lclog -lpthreadpool
+LIBS += -lruy
+LIBS += -lflatbuffers
+LIBS += -lfft2d_fftsg -lfft2d_fftsg2d
+LIBS += -lfarmhash
+
+LIBS += -lliveMedia -lgroupsock -lBasicUsageEnvironment -lUsageEnvironment
 LIBS += -l:libedgetpu.so.1.0 
 LIBS += -lopenmaxil -lbcm_host -lvcos -lvchiq_arm -lbrcmEGL -lbrcmGLESv2 -lpthread -ldl -lrt -lm
 
@@ -56,14 +69,12 @@ LIBS += -l:libc.so.6 -l:libudev.so.1 -l:libusb-1.0.so.0
 INCLUDES = \
 	-I. \
 	-I$(OMXSUPPORT)/include \
-	-I$(LIBYUV)/include \
 	-I$(LIVE555)/liveMedia/include \
 	-I$(LIVE555)/UsageEnvironment/include \
 	-I$(LIVE555)/BasicUsageEnvironment/include \
 	-I$(LIVE555)/groupsock/include \
 	-I$(TFLOWSDK) \
-	-I$(TFLOWSDK)/tensorflow/lite/tools/make/downloads/flatbuffers/include \
-	-I$(TFLOWSDK)/tensorflow/lite/tools/make/downloads/absl \
+	-I$(TFLOWSDK)/build/flatbuffers/include \
 	-I$(EDGETPUSDK) \
 	-I$(EDGETPUSDK)/libedgetpu 
 
