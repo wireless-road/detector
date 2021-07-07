@@ -27,7 +27,9 @@
 #include "utils.h"
 #include "base.h"
 #include "encoder.h"
+#ifndef WITHOUT_RTSP
 #include "rtsp.h"
+#endif
 #include "capturer.h"
 #include "tflow.h"
 #include "tracker.h"
@@ -35,7 +37,11 @@
 namespace detector {
 
 std::unique_ptr<Encoder>  enc(nullptr);
+#ifdef WITHOUT_RTSP
+std::shared_ptr<Rtsp>     rtsp(nullptr);
+#else
 std::unique_ptr<Rtsp>     rtsp(nullptr);
+#endif
 std::unique_ptr<Capturer> cap(nullptr);
 std::unique_ptr<Tflow>    tfl(nullptr);
 std::unique_ptr<Tracker>  trk(nullptr);
@@ -47,9 +53,11 @@ void usage() {
   std::cout << "  where:"                         << std::endl;
   std::cout << "  ?            = this screen"                           << std::endl;
   std::cout << "  (q)uiet      = suppress messages   (default = false)" << std::endl;
+#ifndef WITHOUT_RTSP
   std::cout << "  (r)tsp       = rtsp server         (default = off)"   << std::endl;
   std::cout << "  (u)nicast    = rtsp unicast addr   (default = none)"  << std::endl;
   std::cout << "               = multicast if no address specified"     << std::endl;
+#endif
   std::cout << "  (t)esttime   = test duration       (default = 30sec)" << std::endl;
   std::cout << "               = 0 to run until ctrl-c"                 << std::endl;
   std::cout << "  (d)device    = video device num    (default = 0)"     << std::endl;
@@ -77,13 +85,17 @@ void quitHandler(int s) {
   if (trk)  { trk->stop(); }
   if (tfl)  { tfl->stop(); }
   if (enc)  { enc->stop(); }
+#ifndef WITHOUT_RTSP
   if (rtsp) { rtsp->stop(); }
+#endif
 
   cap.reset(nullptr);
   trk.reset(nullptr);
   tfl.reset(nullptr);
   enc.reset(nullptr);
+#ifndef WITHOUT_RTSP
   rtsp.reset(nullptr);
+#endif
 
   exit(1);
 }
@@ -92,7 +104,9 @@ int main(int argc, char** argv) {
 
   // defaults
   bool quiet = false;
+#ifndef WITHOUT_RTSP
   bool streaming = false;
+#endif
   bool tpu = false;
   bool tracking = false;
   std::string  unicast;
@@ -114,10 +128,12 @@ int main(int argc, char** argv) {
   while((c = getopt(argc, argv, ":qrpku:t:d:f:w:h:b:y:e:s:m:l:o:")) != -1) {
     switch (c) {
       case 'q': quiet     = true;               break;
+#ifndef WITHOUT_RTSP
       case 'r': streaming = true;               break;
+      case 'u': unicast   = optarg;             break;
+#endif
       case 'p': tpu       = true;               break;
       case 'k': tracking  = true;               break;
-      case 'u': unicast   = optarg;             break;
       case 't': testtime  = std::stoul(optarg); break;
       case 'd': device    = std::stoul(optarg); break;
       case 'f': framerate = std::stoul(optarg); break;
@@ -160,10 +176,12 @@ int main(int argc, char** argv) {
       fprintf(stderr, "   test time: run until ctrl-c\n");
     }
     fprintf(stderr, "      device: /dev/video%d\n", device);
+#ifndef WITHOUT_RTSP
     fprintf(stderr, "        rtsp: %s\n", streaming ? "yes" : "no");
     if (streaming) {
       fprintf(stderr, "rstp address: %s\n", unicast.empty() ? "multicast" : unicast.c_str());
     }
+#endif
     fprintf(stderr, "   framerate: %d fps\n", framerate);
     fprintf(stderr, "       width: %d pix %s\n", std::abs(wdth), (wdth < 0) ? "(flipped)" : "" );
     fprintf(stderr, "      height: %d pix %s\n", std::abs(hght), (hght < 0) ? "(flipped)" : "" );
@@ -180,9 +198,11 @@ int main(int argc, char** argv) {
   }
 
   // create worker threads
+#ifndef WITHOUT_RTSP
   if (streaming) { 
     rtsp = Rtsp::create(yield_time, quiet, bitrate, framerate, unicast); 
   }
+#endif
   enc = Encoder::create(yield_time, quiet, tracking, rtsp.get(), framerate, 
       std::abs(wdth), std::abs(hght), bitrate, output, testtime);
   if (tracking) {
@@ -196,7 +216,9 @@ int main(int argc, char** argv) {
 
   // start
   dbgMsg("start\n");
+#ifndef WITHOUT_RTSP
   if (streaming) { rtsp->start("rtsp", 90); }
+#endif
   enc->start("enc", 50);
   if (tracking) { trk->start("trk", 20); }
   tfl->start("tfl", 20);
@@ -204,7 +226,9 @@ int main(int argc, char** argv) {
 
   // run
   dbgMsg("run\n");
+#ifndef WITHOUT_RTSP
   if (streaming) { rtsp->run(); }
+#endif
   enc->run();
   if (tracking) { trk->run(); }
   tfl->run();
@@ -234,14 +258,18 @@ int main(int argc, char** argv) {
   tfl->stop();
   if (tracking) { trk->stop(); }
   enc->stop();
+#ifndef WITHOUT_RTSP
   if (streaming) { rtsp->stop(); }
+#endif
 
   // destroy
   cap.reset(nullptr);
   tfl.reset(nullptr);
   trk.reset(nullptr);
   enc.reset(nullptr);
+#ifndef WITHOUT_RTSP
   rtsp.reset(nullptr);
+#endif
 
   // done
   dbgMsg("done\n");

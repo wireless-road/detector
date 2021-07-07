@@ -21,6 +21,9 @@
 #include <algorithm>
 
 #include "encoder.h"
+#ifndef WITHOUT_RTSP
+#include "rtsp.h"
+#endif
 
 namespace detector {
 
@@ -498,6 +501,7 @@ bool Encoder::running() {
           fwrite(omx_buf_out_->pBuffer, 1, omx_buf_out_->nFilledLen, fd_enc_);
         }
 
+#ifndef WITHOUT_RTSP
         // stream the h264
         if (rtsp_) {
           NalBuf nal(omx_buf_out_->nFilledLen, omx_buf_out_->pBuffer);
@@ -505,6 +509,7 @@ bool Encoder::running() {
             dbgMsg("warning: rtsp is busy\n");
           }
         }
+#endif
 
         // omx buffer used;
         omx_buf_out_->nFilledLen = 0;

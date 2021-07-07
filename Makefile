@@ -13,7 +13,6 @@ SRC = \
 	tflow.cpp \
 	tracker.cpp \
 	encoder.cpp \
-	rtsp.cpp \
 	utils.cpp \
 	./third_party/Hungarian/Hungarian.cpp
 OBJ = $(SRC:.cpp=.o)
@@ -32,12 +31,16 @@ CFLAGS =-DSTANDALONE -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DTARGET_POS
 #CFLAGS += -g 
 CFLAGS += -O3
 
+INCLUDES = \
+	-I. \
+	-I$(OMXSUPPORT)/include \
+	-I$(TFLOWSDK) \
+	-I$(TFLOWSDK)/build/flatbuffers/include \
+	-I$(EDGETPUSDK) \
+	-I$(EDGETPUSDK)/libedgetpu
+
 LDFLAGS = \
 	-L$(OMXSUPPORT)/lib \
-	-L$(LIVE555)/liveMedia \
-	-L$(LIVE555)/UsageEnvironment \
-	-L$(LIVE555)/BasicUsageEnvironment \
-	-L$(LIVE555)/groupsock \
 	-L$(TFLOWSDK)/build \
 	-L$(TFLOWSDK)/build/_deps/xnnpack-build \
 	-L$(TFLOWSDK)/build/cpuinfo \
@@ -56,28 +59,33 @@ LIBS += -lflatbuffers
 LIBS += -lfft2d_fftsg -lfft2d_fftsg2d
 LIBS += -lfarmhash
 
-LIBS += -lliveMedia -lgroupsock -lBasicUsageEnvironment -lUsageEnvironment
 LIBS += -l:libedgetpu.so.1.0 
-LIBS += -lopenmaxil -lbcm_host -lvcos -lvchiq_arm -lbrcmEGL -lbrcmGLESv2 -lpthread -ldl -lrt -lm
 
-#add these if cross compiling
-# this is weird but I can't seem to 'apt install libuse-1.0-dev' so I have 
-# copied them into the home directory from the rpi
-LDFLAGS += -L./lib
-LIBS += -l:libc.so.6 -l:libudev.so.1 -l:libusb-1.0.so.0
+LIBS += -lopenmaxil -lbcm_host -lvcos -lvchiq_arm -lbrcmEGL -lbrcmGLESv2
+LIBS += -lpthread -ldl -lrt -lm
 
-INCLUDES = \
-	-I. \
-	-I$(OMXSUPPORT)/include \
+ifndef WITHOUT_RTSP
+SRC += rtsp.cpp
+INCLUDES += \
 	-I$(LIVE555)/liveMedia/include \
 	-I$(LIVE555)/UsageEnvironment/include \
 	-I$(LIVE555)/BasicUsageEnvironment/include \
-	-I$(LIVE555)/groupsock/include \
-	-I$(TFLOWSDK) \
-	-I$(TFLOWSDK)/build/flatbuffers/include \
-	-I$(EDGETPUSDK) \
-	-I$(EDGETPUSDK)/libedgetpu 
+	-I$(LIVE555)/groupsock/include
+LDFLAGS += \
+	-L$(LIVE555)/liveMedia \
+	-L$(LIVE555)/UsageEnvironment \
+	-L$(LIVE555)/BasicUsageEnvironment \
+	-L$(LIVE555)/groupsock
+LIBS += -lliveMedia -lgroupsock -lBasicUsageEnvironment -lUsageEnvironment
+else
+CFLAGS += -DWITHOUT_RTSP
+endif
 
+#add these if cross compiling
+# this is weird but I can't seem to 'apt install libuse-1.0-dev' so I have
+# copied them into the home directory from the rpi
+LDFLAGS += -L./lib
+LIBS += -l:libc.so.6 -l:libudev.so.1 -l:libusb-1.0.so.0
 
 $(EXE): $(OBJ)
 	$(CXX) $(LDFLAGS) $(OBJ) $(LIBS) -o $@
@@ -88,4 +96,3 @@ $(EXE): $(OBJ)
 .PHONY: clean
 clean:
 	rm -f $(EXE) $(OBJ)
-

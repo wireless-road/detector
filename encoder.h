@@ -30,7 +30,6 @@
 #include "utils.h"
 #include "listener.h"
 #include "base.h"
-#include "rtsp.h"
 
 extern "C" {
 #include <IL/OMX_Core.h>
@@ -44,6 +43,8 @@ extern "C" {
 }
 
 namespace detector {
+
+class Rtsp;
 
 class Encoder : public Base, 
   Listener<FrameBuf>, 
