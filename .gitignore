@@ -1,5 +1,6 @@
 detector
 *.o
+*.d
 frm_*
 *.h264
 *.swp
