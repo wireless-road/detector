@@ -163,7 +163,6 @@ bool Capturer::waitingToRun() {
     res = xioctl(fd_video_, VIDIOC_QUERYCTRL, &queryctrl);
     if (res < 0) {
       dbgMsg("failed: query horizontal flip\n");
-      return false;
     } else if (queryctrl.flags & V4L2_CTRL_FLAG_DISABLED) {
       dbgMsg("warning: horizontal flip not supported\n");
     } else {
@@ -189,7 +188,6 @@ bool Capturer::waitingToRun() {
     res = xioctl(fd_video_, VIDIOC_QUERYCTRL, &queryctrl);
     if (res < 0) {
       dbgMsg("failed: query vertical flip\n");
-      return false;
     } else if (queryctrl.flags & V4L2_CTRL_FLAG_DISABLED) {
       dbgMsg("warning: vertical flip not supported\n");
     } else {
