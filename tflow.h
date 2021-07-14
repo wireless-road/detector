@@ -34,6 +34,10 @@
 
 #include "edgetpu.h"
 
+#ifdef WITH_JPEG
+#include "jpeg_compressor.h"
+#endif
+
 #include <tensorflow/lite/builtin_op_data.h>
 #include <tensorflow/lite/interpreter.h>
 #include <tensorflow/lite/kernels/register.h>
@@ -81,6 +85,10 @@ class Tflow : public Base, Listener<FrameBuf> {
 
     std::string model_fname_;
     unsigned int model_threads_;
+
+#ifdef WITH_JPEG
+    JpegCompressor compressor;
+#endif
 
     std::string labels_fname_;
     std::map<unsigned int, std::pair<std::string, BoxBuf::Type>> label_pairs_;

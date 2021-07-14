@@ -32,6 +32,10 @@
 
 #include "capturer.h"
 
+#ifdef WITH_JPEG
+#include "jpeg_compressor.h"
+#endif
+
 namespace detector {
 
 Capturer::Capturer(unsigned int yieldtime) 
@@ -365,6 +369,12 @@ bool Capturer::running() {
 #ifdef CAPTURE_ONE_RAW_FRAME
       // write frames
       if (frame_cnt_ == capture_cnt_) {
+#ifdef WITH_JPEG
+        JpegCompressor compressor;
+        dbgMsg("pix %dx%d, len=%d\n", pix_width_, pix_height_, framebuf_pool_[buf.index].length);
+        compressor.compressToFile(pix_width_, pix_height_,
+            framebuf_pool_[buf.index].addr, "justframe.jpg");
+#endif
         captureFrame(fd_raw_, pix_fmt_, framebuf_pool_[buf.index].length, 
             framebuf_pool_[buf.index].addr);
       }

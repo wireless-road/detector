@@ -26,7 +26,9 @@ EXE = detector
 # bits of interesting information about the setup.
 #
 # Turn on 'DEBUG_MESSAGES' to turn on debug messages.
-#FEATURES = -DCAPTURE_ONE_RAW_FRAME -DOUTPUT_VARIOUS_BITS_OF_INFO -DDEBUG_MESSAGES
+ifdef WITH_DEBUG_FEATURES
+FEATURES = -DCAPTURE_ONE_RAW_FRAME -DOUTPUT_VARIOUS_BITS_OF_INFO -DDEBUG_MESSAGES
+endif
 
 CFLAGS =-DSTANDALONE -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DTARGET_POSIX -D_LINUX -fPIC -DPIC -D_REENTRANT -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -U_FORTIFY_SOURCE -Wall -DHAVE_LIBOPENMAX=2 -DOMX -DOMX_SKIP64BIT -ftree-vectorize -pipe -DUSE_EXTERNAL_OMX -DHAVE_LIBBCM_HOST -DUSE_EXTERNAL_LIBBCM_HOST -DUSE_VCHIQ_ARM -std=c++17 -march=armv7-a -mfpu=neon-vfpv4 -Wno-psabi $(FEATURES)
 #CFLAGS += -g 
@@ -82,6 +84,13 @@ LDFLAGS += \
 LIBS += -lliveMedia -lgroupsock -lBasicUsageEnvironment -lUsageEnvironment
 else
 CFLAGS += -DWITHOUT_RTSP
+endif
+
+ifdef WITH_JPEG
+SRC += jpeg_compressor.cpp
+INCLUDES += -I/opt/libjpeg-turbo/include/
+LDFLAGS += -L/opt/libjpeg-turbo/lib32/ -lturbojpeg
+CFLAGS += -DWITH_JPEG
 endif
 
 #add these if cross compiling

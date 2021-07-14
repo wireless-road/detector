@@ -358,6 +358,21 @@ bool Tflow::post(bool report) {
     }
   }
 
+#ifdef WITH_JPEG
+  if (!boxes->empty()) {
+     std::vector<unsigned char> withBoxes(frame_.length);
+     withBoxes.resize(frame_.length);
+     std::memcpy(withBoxes.data(), frame_.buf.data(), frame_.length);
+     for (auto i = boxes->begin(); i != boxes->end(); ++i) {
+        drawRGBBox(5, &withBoxes[0], width_, height_,
+            i->x, i->y, i->w, i->h, 255, 0, 0);
+     }
+     char fnBuf[100];
+     sprintf(fnBuf, "./frm_%d.jpg", frame_.id);
+     compressor.compressToFile(width_, height_, &withBoxes[0], fnBuf);
+  }
+#endif
+
   // send boxes if new
   if (post_id_ <= frame_.id) {
     if (enc_) {
