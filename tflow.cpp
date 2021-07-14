@@ -25,6 +25,7 @@
 #include <sstream>
 #include <algorithm>
 #include <iterator>
+#include <sys/stat.h>
 
 #include "tflow.h"
 
@@ -84,6 +85,11 @@ bool Tflow::init(bool quiet,
   tflow_on_ = false;
 
   return true;
+}
+
+void Tflow::save_jpeg_frames(const std::string &path) {
+  jpeg_path_ = path;
+  mkdir(jpeg_path_.c_str(), 0777);
 }
 
 bool Tflow::addMessage(FrameBuf& fbuf) {
@@ -372,17 +378,33 @@ bool Tflow::post(bool report) {
   }
 
 #ifdef WITH_JPEG
-  if (!boxes->empty()) {
+  time_t now = time(NULL);
+  if (!boxes->empty() && !jpeg_path_.empty() && now > last_frame_t_) {
      std::vector<unsigned char> withBoxes(frame_.length);
      withBoxes.resize(frame_.length);
      std::memcpy(withBoxes.data(), frame_.buf.data(), frame_.length);
      for (auto i = boxes->begin(); i != boxes->end(); ++i) {
+        unsigned char r = 0, g = 0, b = 0;
+        switch (i->type) {
+        case BoxBuf::Type::kPerson:
+            r = 255; break;
+        case BoxBuf::Type::kVehicle:
+            b = 255; break;
+        case BoxBuf::Type::kPet:
+            g = 255; break;
+        default:
+            r = g = b = 128;
+            break;
+        }
+
         drawRGBBox(5, &withBoxes[0], width_, height_,
-            i->x, i->y, i->w, i->h, 255, 0, 0);
+            i->x, i->y, i->w, i->h, r, g, b);
      }
+     struct tm stm;
+     localtime_r(&now, &stm);
      char fnBuf[100];
-     sprintf(fnBuf, "./frm_%d.jpg", frame_.id);
-     compressor.compressToFile(width_, height_, &withBoxes[0], fnBuf);
+     strftime(fnBuf, sizeof(fnBuf), "/frm_%g%m%d_%H%M%S.jpg", &stm);
+     compressor.compressToFile(width_, height_, &withBoxes[0], jpeg_path_ + fnBuf);
   }
 #endif
 

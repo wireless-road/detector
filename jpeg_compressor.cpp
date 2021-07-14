@@ -43,13 +43,13 @@ JpegCompressor::compress(unsigned width, unsigned height, const unsigned char *r
 
 bool
 JpegCompressor::compressToFile(unsigned width, unsigned height, const unsigned char *raw_image, 
-    const char *filename) {
+    const std::string &filename) {
     Result jpeg = compress(width, height, raw_image);
     if (!jpeg.data()) {
         return false;
     }
 
-    int fd = open(filename, O_CREAT|O_TRUNC|O_WRONLY, 0666);
+    int fd = open(filename.c_str(), O_CREAT|O_TRUNC|O_WRONLY, 0666);
 
     if (fd < 0) {
         jpeg.free();

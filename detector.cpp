@@ -78,6 +78,9 @@ void usage() {
   std::cout << "                                     (default = ./models/edgetpu_detect.tflite)" << std::endl;
   std::cout << "  (l)abels     = path to labels      (default = ./models/labels.txt)"            << std::endl;
   std::cout << "                                     (default = ./models/edgetpu_labels.txt)"    << std::endl;
+#ifdef WITH_JPEG
+  std::cout << "  (j)peg       = path to save jpegs  (don't save by default)" << std::endl;
+#endif
   std::cout << "  (o)utput     = output file name"                      << std::endl;
   std::cout << "               = no output if testtime is 0"            << std::endl;
 }
@@ -128,10 +131,11 @@ int main(int argc, char** argv) {
   std::string  model;
   std::string  labels;
   std::string  output;
+  std::string  jpeg_path = "";
 
   // cmd line options
   int c;
-  while((c = getopt(argc, argv, ":qrpku:t:d:f:w:h:b:y:e:s:m:l:o:")) != -1) {
+  while((c = getopt(argc, argv, ":qrpku:t:d:f:w:h:b:y:e:s:m:l:o:j:")) != -1) {
     switch (c) {
       case 'q': quiet     = true;               break;
 #ifndef WITHOUT_RTSP
@@ -152,6 +156,7 @@ int main(int argc, char** argv) {
       case 'm': model     = optarg;             break;
       case 'l': labels    = optarg;             break;
       case 'o': output    = optarg;             break;
+      case 'j': jpeg_path = optarg;             break;
 
       case '?':
       default:  usage(); return 0;
@@ -221,12 +226,20 @@ int main(int argc, char** argv) {
 #endif
          dist, 2000);
   }
+
   tfl = Tflow::create(2*yield_time, quiet, 
 #ifndef WITHOUT_ENCODER
       enc.get(),
 #endif
       trk.get(), std::abs(wdth), 
       std::abs(hght), model.c_str(), labels.c_str(), threads, threshold, tpu);
+
+#ifdef WITH_JPEG
+  if (!jpeg_path.empty()) {
+    tfl->save_jpeg_frames(jpeg_path);
+  }
+#endif
+
   cap = Capturer::create(yield_time, quiet,
 #ifndef WITHOUT_ENCODER
       enc.get(),

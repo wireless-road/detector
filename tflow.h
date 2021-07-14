@@ -59,6 +59,10 @@ class Tflow : public Base, Listener<FrameBuf> {
         float threshold, bool tpu);
     virtual ~Tflow();
 
+#ifdef WITH_JPEG
+    void save_jpeg_frames(const std::string &path);
+#endif
+
   public:
     virtual bool addMessage(FrameBuf& data);
 
@@ -99,6 +103,8 @@ class Tflow : public Base, Listener<FrameBuf> {
 
 #ifdef WITH_JPEG
     JpegCompressor compressor;
+    std::string jpeg_path_;
+    time_t last_frame_t_ = 0;
 #endif
 
     std::string labels_fname_;
