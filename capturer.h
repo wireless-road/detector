@@ -27,7 +27,9 @@
 #include "utils.h"
 #include "listener.h"
 #include "base.h"
+#ifndef WITHOUT_ENCODER
 #include "encoder.h"
+#endif
 #include "tflow.h"
 
 namespace detector {
@@ -35,14 +37,21 @@ namespace detector {
 class Capturer : public Base {
   public:
     static std::unique_ptr<Capturer> create(unsigned int yield_time, bool quiet, 
-        Encoder* enc, Tflow* tfl, unsigned int device, unsigned int framerate, 
+#ifndef WITHOUT_ENCODER
+        Encoder* enc,
+#endif
+        Tflow* tfl, unsigned int device, unsigned int framerate, 
         int width, int height);
     virtual ~Capturer();
 
   protected:
     Capturer() = delete;
     Capturer(unsigned int yield_time);
-    bool init(bool quiet, Encoder* enc, Tflow* tfl, unsigned int device,
+    bool init(bool quiet,
+#ifndef WITHOUT_ENCODER
+        Encoder* enc,
+#endif
+        Tflow* tfl, unsigned int device,
         unsigned int framerate, int width, int height);
 
   protected:
@@ -53,7 +62,10 @@ class Capturer : public Base {
 
   private:
     bool quiet_;
+#ifndef WITHOUT_ENCODER
     Encoder* enc_;
+    MicroDiffer<uint32_t> differ_enc_;
+#endif
     Tflow* tfl_;
     unsigned int device_;
     unsigned int framerate_;
@@ -81,7 +93,6 @@ class Capturer : public Base {
 
     int xioctl(int fd, int request, void* arg);
 
-    MicroDiffer<uint32_t> differ_enc_;
     MicroDiffer<uint32_t> differ_tfl_;
     MicroDiffer<uint32_t> differ_tot_;
 

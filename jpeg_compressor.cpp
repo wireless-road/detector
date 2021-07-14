@@ -49,7 +49,7 @@ JpegCompressor::compressToFile(unsigned width, unsigned height, const unsigned c
         return false;
     }
 
-    int fd = open(filename, O_CREAT|O_TRUNC|O_WRONLY);
+    int fd = open(filename, O_CREAT|O_TRUNC|O_WRONLY, 0666);
 
     if (fd < 0) {
         jpeg.free();

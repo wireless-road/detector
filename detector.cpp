@@ -26,7 +26,9 @@
 
 #include "utils.h"
 #include "base.h"
+#ifndef WITHOUT_ENCODER
 #include "encoder.h"
+#endif
 #ifndef WITHOUT_RTSP
 #include "rtsp.h"
 #endif
@@ -36,10 +38,10 @@
 
 namespace detector {
 
+#ifndef WITHOUT_ENCODER
 std::unique_ptr<Encoder>  enc(nullptr);
-#ifdef WITHOUT_RTSP
-std::shared_ptr<Rtsp>     rtsp(nullptr);
-#else
+#endif
+#ifndef WITHOUT_RTSP
 std::unique_ptr<Rtsp>     rtsp(nullptr);
 #endif
 std::unique_ptr<Capturer> cap(nullptr);
@@ -84,7 +86,9 @@ void quitHandler(int s) {
   if (cap)  { cap->stop(); }
   if (trk)  { trk->stop(); }
   if (tfl)  { tfl->stop(); }
+#ifndef WITHOUT_ENCODER
   if (enc)  { enc->stop(); }
+#endif
 #ifndef WITHOUT_RTSP
   if (rtsp) { rtsp->stop(); }
 #endif
@@ -92,7 +96,9 @@ void quitHandler(int s) {
   cap.reset(nullptr);
   trk.reset(nullptr);
   tfl.reset(nullptr);
+#ifndef WITHOUT_ENCODER
   enc.reset(nullptr);
+#endif
 #ifndef WITHOUT_RTSP
   rtsp.reset(nullptr);
 #endif
@@ -203,23 +209,38 @@ int main(int argc, char** argv) {
     rtsp = Rtsp::create(yield_time, quiet, bitrate, framerate, unicast); 
   }
 #endif
+#ifndef WITHOUT_ENCODER
   enc = Encoder::create(yield_time, quiet, tracking, rtsp.get(), framerate, 
       std::abs(wdth), std::abs(hght), bitrate, output, testtime);
+#endif
   if (tracking) {
     double dist = std::sqrt(std::pow(wdth, 2) + std::pow(hght, 2)) / 5.0;
-    trk = Tracker::create(yield_time, quiet, enc.get(), dist, 2000);
+    trk = Tracker::create(yield_time, quiet,
+#ifndef WITHOUT_ENCODER
+         enc.get(),
+#endif
+         dist, 2000);
   }
-  tfl = Tflow::create(2*yield_time, quiet, enc.get(), trk.get(), std::abs(wdth), 
+  tfl = Tflow::create(2*yield_time, quiet, 
+#ifndef WITHOUT_ENCODER
+      enc.get(),
+#endif
+      trk.get(), std::abs(wdth), 
       std::abs(hght), model.c_str(), labels.c_str(), threads, threshold, tpu);
-  cap = Capturer::create(yield_time, quiet, enc.get(), tfl.get(), 
-      device, framerate, wdth, hght);
+  cap = Capturer::create(yield_time, quiet,
+#ifndef WITHOUT_ENCODER
+      enc.get(),
+#endif
+      tfl.get(), device, framerate, wdth, hght);
 
   // start
   dbgMsg("start\n");
 #ifndef WITHOUT_RTSP
   if (streaming) { rtsp->start("rtsp", 90); }
 #endif
+#ifndef WITHOUT_ENCODER
   enc->start("enc", 50);
+#endif
   if (tracking) { trk->start("trk", 20); }
   tfl->start("tfl", 20);
   cap->start("cap", 90);
@@ -229,7 +250,9 @@ int main(int argc, char** argv) {
 #ifndef WITHOUT_RTSP
   if (streaming) { rtsp->run(); }
 #endif
+#ifndef WITHOUT_ENCODER
   enc->run();
+#endif
   if (tracking) { trk->run(); }
   tfl->run();
   cap->run();
@@ -257,7 +280,9 @@ int main(int argc, char** argv) {
   cap->stop();
   tfl->stop();
   if (tracking) { trk->stop(); }
+#ifndef WITHOUT_ENCODER
   enc->stop();
+#endif
 #ifndef WITHOUT_RTSP
   if (streaming) { rtsp->stop(); }
 #endif
@@ -266,7 +291,9 @@ int main(int argc, char** argv) {
   cap.reset(nullptr);
   tfl.reset(nullptr);
   trk.reset(nullptr);
+#ifndef WITHOUT_ENCODER
   enc.reset(nullptr);
+#endif
 #ifndef WITHOUT_RTSP
   rtsp.reset(nullptr);
 #endif

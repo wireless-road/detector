@@ -30,7 +30,7 @@
 
 namespace detector {
 
-Tflow::Tflow(unsigned int yield_time) 
+Tflow::Tflow(unsigned int yield_time)
   : Base(yield_time),
     tflow_empty_(true) {
 }
@@ -38,25 +38,38 @@ Tflow::Tflow(unsigned int yield_time)
 Tflow::~Tflow() {
 }
 
-std::unique_ptr<Tflow> Tflow::create(unsigned int yield_time, bool quiet, 
-    Encoder* enc, Tracker* trk, unsigned int width, unsigned int height, 
-    const char* model, const char* labels, unsigned int threads, float threshold, 
+std::unique_ptr<Tflow> Tflow::create(unsigned int yield_time, bool quiet,
+#ifndef WITHOUT_ENCODER
+    Encoder* enc,
+#endif
+    Tracker* trk, unsigned int width, unsigned int height,
+    const char* model, const char* labels, unsigned int threads, float threshold,
     bool tpu) {
   auto obj = std::unique_ptr<Tflow>(new Tflow(yield_time));
-  obj->init(quiet, enc, trk, width, height, model, labels, threads, threshold, tpu);
+  obj->init(quiet,
+#ifndef WITHOUT_ENCODER
+        enc,
+#endif
+        trk, width, height, model, labels, threads, threshold, tpu);
   return obj;
 }
 
-bool Tflow::init(bool quiet, Encoder* enc, Tracker* trk, unsigned int width, 
-    unsigned int height, const char* model, const char* labels, 
+bool Tflow::init(bool quiet,
+#ifndef WITHOUT_ENCODER
+    Encoder* enc,
+#endif
+    Tracker* trk, unsigned int width,
+    unsigned int height, const char* model, const char* labels,
     unsigned int threads, float threshold, bool tpu) {
 
   quiet_ = quiet;
   tpu_ = tpu;
 
+#ifndef WITHOUT_ENCODER
   enc_ = enc;
+#endif
   trk_ = trk;
-  
+
   width_ = width;
   height_ = height;
 
@@ -70,7 +83,7 @@ bool Tflow::init(bool quiet, Encoder* enc, Tracker* trk, unsigned int width,
 
   tflow_on_ = false;
 
-  return true; 
+  return true;
 }
 
 bool Tflow::addMessage(FrameBuf& fbuf) {
@@ -146,23 +159,23 @@ bool Tflow::waitingToRun() {
     TfLiteQuantizationParams quant;
     resize_interpreter_->SetTensorParametersReadWrite(
         0, kTfLiteFloat32, "input",
-        {1, 
-          static_cast<int>(height_), 
-          static_cast<int>(width_), 
+        {1,
+          static_cast<int>(height_),
+          static_cast<int>(width_),
           static_cast<int>(channels_)
-        }, 
+        },
         quant);
     resize_interpreter_->SetTensorParametersReadWrite(
-        1, kTfLiteInt32, "new_size", 
-        {2}, 
+        1, kTfLiteInt32, "new_size",
+        {2},
         quant);
     resize_interpreter_->SetTensorParametersReadWrite(
         2, kTfLiteFloat32, "output",
-        {1, 
-          static_cast<int>(model_height_), 
-          static_cast<int>(model_width_), 
+        {1,
+          static_cast<int>(model_height_),
+          static_cast<int>(model_width_),
           static_cast<int>(model_channels_)
-        }, 
+        },
         quant);
     tflite::ops::builtin::BuiltinOpResolver resize_resolver;
     const TfLiteRegistration* resize_op =
@@ -211,8 +224,8 @@ bool Tflow::waitingToRun() {
 
 void Tflow::resize(std::unique_ptr<tflite::Interpreter>& interpreter,
     uint8_t* out, uint8_t* in,
-    int image_height, int image_width, int image_channels, 
-    int wanted_height, int wanted_width, int wanted_channels, 
+    int image_height, int image_width, int image_channels,
+    int wanted_height, int wanted_width, int wanted_channels,
     int yield) {
 
   int number_of_pixels = image_height * image_width * image_channels;
@@ -246,9 +259,9 @@ bool Tflow::prep() {
   int input = model_interpreter_->inputs()[0];
   if (model_interpreter_->tensor(input)->type == kTfLiteUInt8) {
     resize(resize_interpreter_,
-        model_interpreter_->typed_tensor<uint8_t>(input), frame_.buf.data(), 
+        model_interpreter_->typed_tensor<uint8_t>(input), frame_.buf.data(),
         height_, width_, channels_,
-        model_height_, model_width_, model_channels_, 
+        model_height_, model_width_, model_channels_,
         yield_time_);
   } else {
     dbgMsg("unrecognized output\n");
@@ -269,7 +282,7 @@ bool Tflow::prep() {
         dbgMsg("  writing resized - fmt:rgb24 len:%d\n",
             model_height_ * model_width_ * model_channels_);
 #endif
-        fwrite(model_interpreter_->typed_tensor<uint8_t>(input), 1, 
+        fwrite(model_interpreter_->typed_tensor<uint8_t>(input), 1,
             model_height_ * model_width_ * model_channels_, fd);
         fclose(fd);
 
@@ -282,7 +295,7 @@ bool Tflow::prep() {
         dbgMsg("  writing fullsize - fmt:rgb24 len:%d\n",
             height_ * width_ * channels_);
 #endif
-        fwrite(frame_.buf.data(), 1, 
+        fwrite(frame_.buf.data(), 1,
             height_ * width_ * channels_, fd);
         fclose(fd);
       }
@@ -304,7 +317,7 @@ bool Tflow::eval() {
 bool Tflow::post(bool report) {
 
   differ_post_.begin();
-  
+
   auto boxes = std::make_shared<std::vector<BoxBuf>>();
 
   const std::vector<int>& res = model_interpreter_->outputs();
@@ -375,11 +388,13 @@ bool Tflow::post(bool report) {
 
   // send boxes if new
   if (post_id_ <= frame_.id) {
+#ifndef WITHOUT_ENCODER
     if (enc_) {
       if (!enc_->addMessage(boxes)) {
         dbgMsg("encoder busy\n");
       }
     }
+#endif
     if (trk_) {
       if (!trk_->addMessage(boxes)) {
         dbgMsg("tracker busy\n");
@@ -446,21 +461,21 @@ bool Tflow::waitingToHalt() {
     // report
     if (!quiet_) {
       fprintf(stderr, "\nTflow Results...\n");
-      fprintf(stderr, "  image copy time (us): high:%u avg:%u low:%u cnt:%u\n", 
-          differ_copy_.high, differ_copy_.avg, 
+      fprintf(stderr, "  image copy time (us): high:%u avg:%u low:%u cnt:%u\n",
+          differ_copy_.high, differ_copy_.avg,
           differ_copy_.low,  differ_copy_.cnt);
-      fprintf(stderr, "  image prep time (us): high:%u avg:%u low:%u cnt:%u\n", 
-          differ_prep_.high, differ_prep_.avg, 
+      fprintf(stderr, "  image prep time (us): high:%u avg:%u low:%u cnt:%u\n",
+          differ_prep_.high, differ_prep_.avg,
           differ_prep_.low,  differ_prep_.cnt);
-      fprintf(stderr, "  image eval time (us): high:%u avg:%u low:%u cnt:%u\n", 
-          differ_eval_.high, differ_eval_.avg, 
+      fprintf(stderr, "  image eval time (us): high:%u avg:%u low:%u cnt:%u\n",
+          differ_eval_.high, differ_eval_.avg,
           differ_eval_.low,  differ_eval_.cnt);
-      fprintf(stderr, "  image post time (us): high:%u avg:%u low:%u cnt:%u\n", 
-          differ_post_.high, differ_post_.avg, 
+      fprintf(stderr, "  image post time (us): high:%u avg:%u low:%u cnt:%u\n",
+          differ_post_.high, differ_post_.avg,
           differ_post_.low,  differ_post_.cnt);
-      fprintf(stderr, "       total test time: %f sec\n", 
+      fprintf(stderr, "       total test time: %f sec\n",
           differ_tot_.avg / 1000000.f);
-      fprintf(stderr, "     frames per second: %f fps\n", 
+      fprintf(stderr, "     frames per second: %f fps\n",
           differ_post_.cnt * 1000000.f / differ_tot_.avg);
       fprintf(stderr, "\n");
     }

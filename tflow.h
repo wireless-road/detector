@@ -29,7 +29,9 @@
 #include "utils.h"
 #include "listener.h"
 #include "base.h"
+#ifndef WITHOUT_ENCODER
 #include "encoder.h"
+#endif
 #include "tracker.h"
 
 #include "edgetpu.h"
@@ -48,9 +50,12 @@ namespace detector {
 
 class Tflow : public Base, Listener<FrameBuf> {
   public:
-    static std::unique_ptr<Tflow> create(unsigned int yield_time, bool quiet, 
-        Encoder* enc, Tracker* trk, unsigned int width, unsigned int height, 
-        const char* model, const char* labels, unsigned int threads, 
+    static std::unique_ptr<Tflow> create(unsigned int yield_time, bool quiet,
+#ifndef WITHOUT_ENCODER
+        Encoder* enc,
+#endif
+	Tracker* trk, unsigned int width, unsigned int height,
+        const char* model, const char* labels, unsigned int threads,
         float threshold, bool tpu);
     virtual ~Tflow();
 
@@ -60,8 +65,12 @@ class Tflow : public Base, Listener<FrameBuf> {
   protected:
     Tflow() = delete;
     Tflow(unsigned int yield_time);
-    bool init(bool quiet, Encoder* enc, Tracker* trk, unsigned int width, 
-        unsigned int height, const char* model, const char* labels, 
+    bool init(bool quiet,
+#ifndef WITHOUT_ENCODER
+	Encoder* enc,
+#endif
+	Tracker* trk, unsigned int width,
+        unsigned int height, const char* model, const char* labels,
         unsigned int threads, float threshold, bool tpu);
 
   protected:
@@ -73,7 +82,9 @@ class Tflow : public Base, Listener<FrameBuf> {
   private:
     bool quiet_;
     bool tpu_;
+#ifndef WITHOUT_ENCODER
     Encoder* enc_;
+#endif
     Tracker* trk_;
     unsigned int width_;
     unsigned int height_;
@@ -92,7 +103,7 @@ class Tflow : public Base, Listener<FrameBuf> {
 
     std::string labels_fname_;
     std::map<unsigned int, std::pair<std::string, BoxBuf::Type>> label_pairs_;
-    const std::map<std::string, BoxBuf::Type> boxbuf_pairs_ = 
+    const std::map<std::string, BoxBuf::Type> boxbuf_pairs_ =
     {
       { "person",     BoxBuf::Type::kPerson  },
       { "cat",        BoxBuf::Type::kPet     },
@@ -132,8 +143,8 @@ class Tflow : public Base, Listener<FrameBuf> {
 
     void resize(std::unique_ptr<tflite::Interpreter>& interpreter,
         uint8_t* out, uint8_t* in,
-        int image_height, int image_width, int image_channels, 
-        int wanted_height, int wanted_width, int wanted_channels, 
+        int image_height, int image_width, int image_channels,
+        int wanted_height, int wanted_width, int wanted_channels,
         int yield);
     bool prep();
     bool eval();

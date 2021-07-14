@@ -12,12 +12,12 @@ SRC = \
 	capturer.cpp \
 	tflow.cpp \
 	tracker.cpp \
-	encoder.cpp \
 	utils.cpp \
 	./third_party/Hungarian/Hungarian.cpp
 OBJ = $(SRC:.cpp=.o)
 DEP = $(OBJ:.o=.d)
 EXE = detector
+
 
 # Turn on 'CAPTURE_ONE_RAW_FRAME' to write the 10th frame
 # in to './frame_wxh_ffps.yuv' file (w=width, h=height, f=framerate).
@@ -30,19 +30,19 @@ ifdef WITH_DEBUG_FEATURES
 FEATURES = -DCAPTURE_ONE_RAW_FRAME -DOUTPUT_VARIOUS_BITS_OF_INFO -DDEBUG_MESSAGES
 endif
 
-CFLAGS =-DSTANDALONE -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DTARGET_POSIX -D_LINUX -fPIC -DPIC -D_REENTRANT -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -U_FORTIFY_SOURCE -Wall -DHAVE_LIBOPENMAX=2 -DOMX -DOMX_SKIP64BIT -ftree-vectorize -pipe -DUSE_EXTERNAL_OMX -DHAVE_LIBBCM_HOST -DUSE_EXTERNAL_LIBBCM_HOST -DUSE_VCHIQ_ARM -std=c++17 -march=armv7-a -mfpu=neon-vfpv4 -Wno-psabi $(FEATURES)
-#CFLAGS += -g 
+CFLAGS =-DSTANDALONE -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DTARGET_POSIX -D_LINUX -fPIC -DPIC -D_REENTRANT -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -U_FORTIFY_SOURCE -Wall -ftree-vectorize -pipe -DUSE_EXTERNAL_OMX -DUSE_VCHIQ_ARM -std=c++17 -march=armv7-a -mfpu=neon-vfpv4 -Wno-psabi -Wno-attributes $(FEATURES)
+#CFLAGS += -g
 CFLAGS += -O3
 
 DEPFLAGS = -MD -MP
 
 INCLUDES = \
 	-I. \
-	-I$(OMXSUPPORT)/include \
 	-I$(TFLOWSDK) \
 	-I$(TFLOWSDK)/build/flatbuffers/include \
 	-I$(EDGETPUSDK) \
 	-I$(EDGETPUSDK)/libedgetpu
+
 
 LDFLAGS = \
 	-L$(OMXSUPPORT)/lib \
@@ -64,9 +64,14 @@ LIBS += -lflatbuffers
 LIBS += -lfft2d_fftsg -lfft2d_fftsg2d
 LIBS += -lfarmhash
 
-LIBS += -l:libedgetpu.so.1.0 
+LIBS += -l:libedgetpu.so.1.0
 
+ifndef WITHOUT_ENCODER
+SRC += encoder.cpp
+INCLUDES += -I$(OMXSUPPORT)/include
+CFLAGS += -DHAVE_LIBOPENMAX=2 -DOMX -DOMX_SKIP64BIT -DHAVE_LIBBCM_HOST -DUSE_EXTERNAL_LIBBCM_HOST
 LIBS += -lopenmaxil -lbcm_host -lvcos -lvchiq_arm -lbrcmEGL -lbrcmGLESv2
+endif
 LIBS += -lpthread -ldl -lrt -lm
 
 ifndef WITHOUT_RTSP
@@ -91,6 +96,12 @@ SRC += jpeg_compressor.cpp
 INCLUDES += -I/opt/libjpeg-turbo/include/
 LDFLAGS += -L/opt/libjpeg-turbo/lib32/ -lturbojpeg
 CFLAGS += -DWITH_JPEG
+endif
+
+ifndef WITHOUT_ENCODER
+SRCS += encoder.cpp
+else
+CFLAGS += -DWITHOUT_ENCODER
 endif
 
 #add these if cross compiling

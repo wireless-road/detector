@@ -30,7 +30,9 @@
 #include "utils.h"
 #include "listener.h"
 #include "base.h"
+#ifndef WITHOUT_ENCODER
 #include "encoder.h"
+#endif
 
 #include "Eigen/Dense"
 
@@ -86,8 +88,11 @@ class Tracker : public Base, Listener<std::shared_ptr<std::vector<BoxBuf>>> {
     };
 
   public:
-    static std::unique_ptr<Tracker> create(unsigned int yield_time, bool quiet, 
-        Encoder* enc, double max_dist, unsigned int max_time);
+    static std::unique_ptr<Tracker> create(unsigned int yield_time, bool quiet,
+#ifndef WITHOUT_ENCODER
+        Encoder* enc,
+#endif
+	double max_dist, unsigned int max_time);
     virtual ~Tracker();
 
   public:
@@ -96,7 +101,11 @@ class Tracker : public Base, Listener<std::shared_ptr<std::vector<BoxBuf>>> {
   protected:
     Tracker() = delete;
     Tracker(unsigned int yield_time);
-    bool init(bool quiet, Encoder* enc, double max_dist, unsigned int max_time);
+    bool init(bool quiet,
+#ifndef WITHOUT_ENCODER
+	 Encoder* enc,
+#endif
+	 double max_dist, unsigned int max_time);
 
   protected:
     virtual bool waitingToRun();
@@ -106,7 +115,9 @@ class Tracker : public Base, Listener<std::shared_ptr<std::vector<BoxBuf>>> {
 
   private:
     bool quiet_;
+#ifndef WITHOUT_ENCODER
     Encoder* enc_;
+#endif
     double max_dist_;
     unsigned int max_time_;
 

@@ -137,16 +137,29 @@ Tracker::~Tracker() {
 
 std::unique_ptr<Tracker> Tracker::create(
     unsigned int yield_time, bool quiet, 
-    Encoder* enc, double max_dist, unsigned int max_time) {
+#ifndef WITHOUT_ENCODER
+    Encoder* enc,
+#endif
+    double max_dist, unsigned int max_time) {
   auto obj = std::unique_ptr<Tracker>(new Tracker(yield_time));
-  obj->init(quiet, enc, max_dist, max_time);
+  obj->init(quiet,
+#ifndef WITHOUT_ENCODER
+      enc,
+#endif
+      max_dist, max_time);
   return obj;
 }
 
-bool Tracker::init(bool quiet, Encoder* enc, double max_dist, unsigned int max_time) {
+bool Tracker::init(bool quiet,
+#ifndef WITHOUT_ENCODER
+    Encoder* enc,
+#endif
+    double max_dist, unsigned int max_time) {
 
   quiet_ = quiet;
+#ifndef WITHOUT_ENCODER
   enc_ = enc;
+#endif
   max_dist_ = max_dist;
   max_time_ = max_time;
 
@@ -318,11 +331,13 @@ bool Tracker::postTracks() {
               round(t.x), round(t.y), round(t.w), round(t.h)));
       });
 
+#ifndef WITHOUT_ENCODER
   if (enc_) {
     if (!enc_->addMessage(tracks)) {
       dbgMsg("encoder busy");
     }
   }
+#endif
 
   differ_post_.end();
   return true;

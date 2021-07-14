@@ -23,6 +23,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <errno.h>
@@ -38,27 +39,40 @@
 
 namespace detector {
 
-Capturer::Capturer(unsigned int yieldtime) 
-  : Base(yieldtime), 
+Capturer::Capturer(unsigned int yieldtime)
+  : Base(yieldtime),
     framebuf_pool_(framebuf_num_) {
 }
 
 Capturer::~Capturer() {
 }
 
-std::unique_ptr<Capturer> Capturer::create(unsigned int yield_time, bool quiet, 
-    Encoder* enc, Tflow* tfl, unsigned int device, unsigned int framerate, 
+std::unique_ptr<Capturer> Capturer::create(unsigned int yield_time, bool quiet,
+#ifndef WITHOUT_ENCODER
+    Encoder* enc,
+#endif
+    Tflow* tfl, unsigned int device, unsigned int framerate,
     int width, int height) {
   auto obj = std::unique_ptr<Capturer>(new Capturer(yield_time));
-  obj->init(quiet, enc, tfl, device, framerate, width, height);
+  obj->init(quiet,
+#ifndef WITHOUT_ENCODER
+            enc,
+#endif
+            tfl, device, framerate, width, height);
   return obj;
 }
 
-bool Capturer::init(bool quiet, Encoder* enc, Tflow* tfl, unsigned int device, 
-    unsigned int framerate, int width, int height) { 
+bool Capturer::init(bool quiet,
+#ifndef WITHOUT_ENCODER
+    Encoder* enc,
+#endif
+    Tflow* tfl, unsigned int device,
+    unsigned int framerate, int width, int height) {
 
   quiet_ = quiet;
+#ifndef WITHOUT_ENCODER
   enc_ = enc;
+#endif
   tfl_ = tfl;
   device_ = device;
   framerate_ = framerate;
@@ -389,6 +403,7 @@ bool Capturer::running() {
       }
 
       // send frame to encoder
+#ifndef WITHOUT_ENCODER
       if (enc_) {
         differ_enc_.begin();
         if (!enc_->addMessage(framebuf_pool_[buf.index])) {
@@ -396,6 +411,7 @@ bool Capturer::running() {
         }
         differ_enc_.end();
       }
+#endif
 
       // enqueue buffer
       res = xioctl(fd_video_, VIDIOC_QBUF, &buf);
@@ -458,13 +474,17 @@ bool Capturer::waitingToHalt() {
       fprintf(stderr, "   tflow copy time (us): high:%u avg:%u low:%u cnt:%u\n", 
           differ_tfl_.high, differ_tfl_.avg, 
           differ_tfl_.low,  differ_tfl_.cnt);
+#ifndef WITHOUT_ENCODER
       fprintf(stderr, "  encode copy time (us): high:%u avg:%u low:%u cnt:%u\n", 
           differ_enc_.high, differ_enc_.avg, 
           differ_enc_.low,  differ_enc_.cnt);
+#endif
       fprintf(stderr, "        total test time: %f sec\n", 
           differ_tot_.avg / 1000000.f);
+#ifndef WITHOUT_ENCODER
       fprintf(stderr, "      frames per second: %f fps\n", 
           differ_enc_.cnt * 1000000.f / differ_tot_.avg);
+#endif
       fprintf(stderr, "\n");
     }
   }
