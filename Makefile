@@ -94,8 +94,15 @@ endif
 ifdef WITH_JPEG
 SRC += jpeg_compressor.cpp
 INCLUDES += -I/opt/libjpeg-turbo/include/
-LDFLAGS += -L/opt/libjpeg-turbo/lib32/ -lturbojpeg
 CFLAGS += -DWITH_JPEG
+LDFLAGS += -L/opt/libjpeg-turbo/lib32/ -lturbojpeg
+endif
+
+ifdef WITH_YUV
+SRC += frame_convert.cpp
+INCLUDES += -I/usr/local/include/
+CFLAGS += -DWITH_YUV
+LDFLAGS += -lyuv
 endif
 
 ifndef WITHOUT_ENCODER

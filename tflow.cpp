@@ -87,10 +87,16 @@ bool Tflow::init(bool quiet,
   return true;
 }
 
-void Tflow::save_jpeg_frames(const std::string &path) {
+void Tflow::saveJpegFrames(const std::string &path) {
   jpeg_path_ = path;
   mkdir(jpeg_path_.c_str(), 0777);
 }
+
+#ifdef WITH_YUV
+bool Tflow::setPixFormat(unsigned pix_fmt, unsigned width, unsigned height) {
+  return convert_colorspace_.setup(pix_fmt, width, height);
+}
+#endif
 
 bool Tflow::addMessage(FrameBuf& fbuf) {
 
@@ -102,14 +108,22 @@ bool Tflow::addMessage(FrameBuf& fbuf) {
   }
 
   if (tflow_empty_) {
+    differ_copy_.begin();
+#ifndef WITH_YUV
     if (frame_len_ != fbuf.length) {
       dbgMsg("tflow buffer size mismatch\n");
       return false;
     }
-    differ_copy_.begin();
-    frame_.id = fbuf.id;
-    frame_.length = fbuf.length;
     std::memcpy(frame_.buf.data(), fbuf.addr, fbuf.length);
+#else
+    if (!convert_colorspace_.convert(
+      fbuf.addr, frame_.buf.data(), fbuf.length, frame_len_)) {
+        dbgMsg("tflow failed to convert frame to rgb\n");
+        return false;
+    }
+#endif
+    frame_.id = fbuf.id;
+    frame_.length = frame_len_;
     tflow_empty_ = false;
     differ_copy_.end();
   }
@@ -379,7 +393,7 @@ bool Tflow::post(bool report) {
 
 #ifdef WITH_JPEG
   time_t now = time(NULL);
-  if (!boxes->empty() && !jpeg_path_.empty() && now > last_frame_t_) {
+  if (!boxes->empty() && !jpeg_path_.empty() && (now > last_frame_t_)) {
      std::vector<unsigned char> withBoxes(frame_.length);
      withBoxes.resize(frame_.length);
      std::memcpy(withBoxes.data(), frame_.buf.data(), frame_.length);

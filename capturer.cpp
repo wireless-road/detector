@@ -33,10 +33,6 @@
 
 #include "capturer.h"
 
-#ifdef WITH_JPEG
-#include "jpeg_compressor.h"
-#endif
-
 namespace detector {
 
 Capturer::Capturer(unsigned int yieldtime)
@@ -136,14 +132,14 @@ bool Capturer::waitingToRun() {
     fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     bool found = false;
     while (xioctl(fd_video_, VIDIOC_ENUM_FMT, &fmtdesc) == 0) {
+      dbgMsg("  fmt %02d) %s, %s, %s\n", fmtdesc.index, BufTypeToStr(fmtdesc.type),
+          fmtdesc.description, PixelFormatToStr(fmtdesc.pixelformat));
       auto it = std::find_if(formats_.begin(), formats_.end(), 
           [&](unsigned int const & fmt) -> bool { return fmt == fmtdesc.pixelformat; });
       if (!found && it != formats_.end()) {
         pix_fmt_ = fmtdesc.pixelformat;
         found = true;
       }
-      dbgMsg("  fmt %02d) %s, %s, %s\n", fmtdesc.index, BufTypeToStr(fmtdesc.type),
-          fmtdesc.description, PixelFormatToStr(fmtdesc.pixelformat));
       fmtdesc.index++;
     }
     if (!found) {
@@ -257,6 +253,12 @@ bool Capturer::waitingToRun() {
       dbgMsg("failed: set %s format\n", PixelFormatToStr(pix_fmt_));
       return false;
     }
+#ifdef WITH_YUV
+    if (!tfl_->setPixFormat(fmt.fmt.pix.pixelformat, fmt.fmt.pix.width, fmt.fmt.pix.height)) {
+      dbgMsg("failed: set pix format for tensorflow\n");
+      return false;
+    }
+#endif
 
     dbgMsg("get v4l2 format\n");
     memset(&fmt, 0, sizeof(fmt));
@@ -383,12 +385,6 @@ bool Capturer::running() {
 #ifdef CAPTURE_ONE_RAW_FRAME
       // write frames
       if (frame_cnt_ == capture_cnt_) {
-#ifdef WITH_JPEG
-        JpegCompressor compressor;
-        dbgMsg("pix %dx%d, len=%d\n", pix_width_, pix_height_, framebuf_pool_[buf.index].length);
-        compressor.compressToFile(pix_width_, pix_height_,
-            framebuf_pool_[buf.index].addr, "justframe.jpg");
-#endif
         captureFrame(fd_raw_, pix_fmt_, framebuf_pool_[buf.index].length, 
             framebuf_pool_[buf.index].addr);
       }

@@ -40,6 +40,10 @@
 #include "jpeg_compressor.h"
 #endif
 
+#ifdef WITH_YUV
+#include "frame_convert.h"
+#endif
+
 #include <tensorflow/lite/builtin_op_data.h>
 #include <tensorflow/lite/interpreter.h>
 #include <tensorflow/lite/kernels/register.h>
@@ -60,7 +64,11 @@ class Tflow : public Base, Listener<FrameBuf> {
     virtual ~Tflow();
 
 #ifdef WITH_JPEG
-    void save_jpeg_frames(const std::string &path);
+    void saveJpegFrames(const std::string &path);
+#endif
+
+#ifdef WITH_YUV
+    bool setPixFormat(unsigned format, unsigned width, unsigned height);
 #endif
 
   public:
@@ -105,6 +113,10 @@ class Tflow : public Base, Listener<FrameBuf> {
     JpegCompressor compressor;
     std::string jpeg_path_;
     time_t last_frame_t_ = 0;
+#endif
+
+#ifdef WITH_YUV
+    CSConvertor convert_colorspace_;
 #endif
 
     std::string labels_fname_;

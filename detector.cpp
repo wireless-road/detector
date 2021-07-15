@@ -236,7 +236,7 @@ int main(int argc, char** argv) {
 
 #ifdef WITH_JPEG
   if (!jpeg_path.empty()) {
-    tfl->save_jpeg_frames(jpeg_path);
+    tfl->saveJpegFrames(jpeg_path);
   }
 #endif
 

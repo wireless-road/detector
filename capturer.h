@@ -81,6 +81,9 @@ class Capturer : public Base {
 
     std::vector<int> formats_ = {
       V4L2_PIX_FMT_RGB24   // in order of preference
+#ifdef WITH_YUV
+      , V4L2_PIX_FMT_UYVY
+#endif
     };
 
     unsigned int frame_cnt_;
