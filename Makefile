@@ -95,9 +95,9 @@ endif
 
 ifdef WITH_JPEG
 SRC += jpeg_compressor.cpp
-INCLUDES += -I/opt/libjpeg-turbo/include/
+INCLUDES += -I$(LIBJPEG_PATH)/include/
 CFLAGS += -DWITH_JPEG
-LDFLAGS += -L/opt/libjpeg-turbo/lib32/ -lturbojpeg
+LDFLAGS += -L$(LIBJPEG_PATH)/lib32/ -ljpeg
 endif
 
 ifdef WITH_YUV
