@@ -71,6 +71,8 @@ SRC += encoder.cpp
 INCLUDES += -I$(OMXSUPPORT)/include
 CFLAGS += -DHAVE_LIBOPENMAX=2 -DOMX -DOMX_SKIP64BIT -DHAVE_LIBBCM_HOST -DUSE_EXTERNAL_LIBBCM_HOST
 LIBS += -lopenmaxil -lbcm_host -lvcos -lvchiq_arm -lbrcmEGL -lbrcmGLESv2
+else
+CFLAGS += -DWITHOUT_ENCODER
 endif
 LIBS += -lpthread -ldl -lrt -lm
 
@@ -103,12 +105,6 @@ SRC += frame_convert.cpp
 INCLUDES += -I/usr/local/include/
 CFLAGS += -DWITH_YUV
 LDFLAGS += -lyuv
-endif
-
-ifndef WITHOUT_ENCODER
-SRCS += encoder.cpp
-else
-CFLAGS += -DWITHOUT_ENCODER
 endif
 
 #add these if cross compiling
