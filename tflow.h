@@ -34,7 +34,9 @@
 #endif
 #include "tracker.h"
 
+#ifndef WITHOUT_EDGETPU
 #include "edgetpu.h"
+#endif
 
 #ifdef WITH_JPEG
 #include "jpeg_compressor.h"
@@ -146,7 +148,9 @@ class Tflow : public Base, Listener<FrameBuf> {
     Tflow::Frame frame_;
 
     std::unique_ptr<tflite::FlatBufferModel> model_;
+#ifndef WITHOUT_EDGETPU
     std::shared_ptr<edgetpu::EdgeTpuContext> edgetpu_context_;
+#endif
     std::unique_ptr<tflite::Interpreter> model_interpreter_;
     std::unique_ptr<tflite::Interpreter> resize_interpreter_;
 

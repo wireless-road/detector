@@ -75,9 +75,13 @@ void usage() {
   std::cout << "  t(p)u        = use Edge TPU        (default = false)" << std::endl;
   std::cout << "  trac(k)ing   = track targets       (default = false)" << std::endl;
   std::cout << "  (m)odel      = path to model       (default = ./models/detect.tflite)"         << std::endl;
+#ifndef WITHOUT_EDGETPU
   std::cout << "                                     (default = ./models/edgetpu_detect.tflite)" << std::endl;
+#endif
   std::cout << "  (l)abels     = path to labels      (default = ./models/labels.txt)"            << std::endl;
+#ifndef WITHOUT_EDGETPU
   std::cout << "                                     (default = ./models/edgetpu_labels.txt)"    << std::endl;
+#endif
 #ifdef WITH_JPEG
   std::cout << "  (j)peg       = path to save jpegs  (don't save by default)" << std::endl;
 #endif
@@ -142,7 +146,9 @@ int main(int argc, char** argv) {
       case 'r': streaming = true;               break;
       case 'u': unicast   = optarg;             break;
 #endif
+#ifndef WITHOUT_EDGETPU
       case 'p': tpu       = true;               break;
+#endif
       case 'k': tracking  = true;               break;
       case 't': testtime  = std::stoul(optarg); break;
       case 'd': device    = std::stoul(optarg); break;

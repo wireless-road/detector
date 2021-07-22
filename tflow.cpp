@@ -137,12 +137,15 @@ bool Tflow::waitingToRun() {
 
     // find tpu
     dbgMsg("find tpu\n");
+#ifndef WITHOUT_EDGETPU
     const auto& available_tpus =
         edgetpu::EdgeTpuManager::GetSingleton()->EnumerateEdgeTpu();
-
+#endif
     // make model and interpreter
     dbgMsg("make model and interpreter\n");
+#ifndef WITHOUT_EDGETPU
     if (tpu_ && available_tpus.size()) {
+
       model_ = tflite::FlatBufferModel::BuildFromFile(model_fname_.c_str());
       edgetpu_context_ = edgetpu::EdgeTpuManager::GetSingleton()->OpenDevice();
       tflite::ops::builtin::BuiltinOpResolver resolver;
@@ -152,13 +155,16 @@ bool Tflow::waitingToRun() {
       model_interpreter_->SetExternalContext(kTfLiteEdgeTpuContext, edgetpu_context_.get());
       model_interpreter_->SetNumThreads(1);
     } else {
+#endif
       model_ = tflite::FlatBufferModel::BuildFromFile(model_fname_.c_str());
       tflite::ops::builtin::BuiltinOpResolver resolver;
       tflite::InterpreterBuilder builder(*model_, resolver);
       builder(&model_interpreter_);
       //model_interpreter_->UseNNAPI(false);
       model_interpreter_->SetNumThreads(model_threads_);
+#ifndef WITHOUT_EDGETPU
     }
+#endif
     model_interpreter_->AllocateTensors();
     int input = model_interpreter_->inputs()[0];
     const std::vector<int> inputs = model_interpreter_->inputs();
@@ -205,13 +211,17 @@ bool Tflow::waitingToRun() {
     params->align_corners = false;
     resize_interpreter_->AddNodeWithParameters(
         {0, 1}, {2}, nullptr, 0, params, resize_op, nullptr);
+ #ifndef WITHOUT_EDGETPU
     if (tpu_ && available_tpus.size()) {
       resize_interpreter_->SetExternalContext(kTfLiteEdgeTpuContext, edgetpu_context_.get());
       resize_interpreter_->SetNumThreads(1);
     } else {
+#endif
       //resize_interpreter_->UseNNAPI(false);
       resize_interpreter_->SetNumThreads(model_threads_);
+#ifndef WITHOUT_EDGETPU
     }
+#endif
     resize_interpreter_->AllocateTensors();
 
     // read labels file
@@ -491,7 +501,9 @@ bool Tflow::waitingToHalt() {
     // reset tensorflow ojects
     model_interpreter_.reset();
     resize_interpreter_.reset();
+#ifndef WITHOUT_EDGETPU
     edgetpu_context_.reset();
+#endif
     model_.reset();
 
     // report

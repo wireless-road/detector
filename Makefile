@@ -44,7 +44,6 @@ INCLUDES = \
 	-I$(EDGETPUSDK) \
 	-I$(EDGETPUSDK)/libedgetpu
 
-
 LDFLAGS = \
 	-L$(OMXSUPPORT)/lib \
 	-L$(TFLOWSDK)/build \
@@ -68,7 +67,11 @@ LIBS += -lflatbuffers
 LIBS += -lfft2d_fftsg -lfft2d_fftsg2d
 LIBS += -lfarmhash
 
+ifndef WITHOUT_EDGETPU
 LIBS += -l:libedgetpu.so.1.0
+else
+CFLAGS += -DWITHOUT_EDGETPU
+endif
 
 ifndef WITHOUT_ENCODER
 SRC += encoder.cpp
