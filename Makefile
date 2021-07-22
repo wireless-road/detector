@@ -36,6 +36,7 @@ CFLAGS += -O3
 
 DEPFLAGS = -MD -MP
 
+ifndef OPENWRT
 INCLUDES = \
 	-I. \
 	-I$(TFLOWSDK) \
@@ -56,6 +57,9 @@ LDFLAGS = \
 	-L$(TFLOWSDK)/build/_deps/fft2d-build \
 	-L$(TFLOWSDK)/build/_deps/farmhash-build \
 	-L$(EDGETPUSDK)/libedgetpu/direct/armv7a
+else
+    INCLUDES = -I.
+endif
 
 LIBS = -ltensorflow-lite
 LIBS += -lXNNPACK -lcpuinfo -lclog -lpthreadpool
@@ -95,14 +99,19 @@ endif
 
 ifdef WITH_JPEG
 SRC += jpeg_compressor.cpp
-INCLUDES += -I$(LIBJPEG_PATH)/include/
 CFLAGS += -DWITH_JPEG
-LDFLAGS += -L$(LIBJPEG_PATH)/lib32/ -ljpeg
+ifndef OPENWRT
+INCLUDES += -I$(LIBJPEG_PATH)/include/
+LDFLAGS += -L$(LIBJPEG_PATH)/lib32/ 
+endif
+LDFLAGS += -ljpeg
 endif
 
 ifdef WITH_YUV
 SRC += frame_convert.cpp
+ifndef OPENWRT
 INCLUDES += -I/usr/local/include/
+endif
 CFLAGS += -DWITH_YUV
 LDFLAGS += -lyuv
 endif
@@ -110,8 +119,10 @@ endif
 #add these if cross compiling
 # this is weird but I can't seem to 'apt install libuse-1.0-dev' so I have
 # copied them into the home directory from the rpi
+ifndef OPENWRT
 LDFLAGS += -L./lib
 LIBS += -l:libc.so.6 -l:libudev.so.1 -l:libusb-1.0.so.0
+endif
 
 $(EXE): $(OBJ)
 	$(CXX) $(LDFLAGS) $(OBJ) $(LIBS) -o $@
