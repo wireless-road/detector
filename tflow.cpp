@@ -403,32 +403,34 @@ bool Tflow::post(bool report) {
 
 #ifdef WITH_JPEG
   time_t now = time(NULL);
-  if (!boxes->empty() && !jpeg_path_.empty() && (now > last_frame_t_)) {
-     std::vector<unsigned char> withBoxes(frame_.length);
-     withBoxes.resize(frame_.length);
-     std::memcpy(withBoxes.data(), frame_.buf.data(), frame_.length);
-     for (auto i = boxes->begin(); i != boxes->end(); ++i) {
-        unsigned char r = 0, g = 0, b = 0;
-        switch (i->type) {
-        case BoxBuf::Type::kPerson:
+  if (!jpeg_path_.empty()) {
+    if ((!boxes->empty() || !((now - last_frame_t_) % 10)) && (now > last_frame_t_)) {
+       std::vector<unsigned char> withBoxes(frame_.length);
+       withBoxes.resize(frame_.length);
+       std::memcpy(withBoxes.data(), frame_.buf.data(), frame_.length);
+       for (auto i = boxes->begin(); i != boxes->end(); ++i) {
+            unsigned char r = 0, g = 0, b = 0;
+         switch (i->type) {
+         case BoxBuf::Type::kPerson:
             r = 255; break;
-        case BoxBuf::Type::kVehicle:
+         case BoxBuf::Type::kVehicle:
             b = 255; break;
-        case BoxBuf::Type::kPet:
+         case BoxBuf::Type::kPet:
             g = 255; break;
-        default:
+         default:
             r = g = b = 128;
             break;
-        }
+         }
 
-        drawRGBBox(5, &withBoxes[0], width_, height_,
+         drawRGBBox(5, &withBoxes[0], width_, height_,
             i->x, i->y, i->w, i->h, r, g, b);
-     }
-     struct tm stm;
-     localtime_r(&now, &stm);
-     char fnBuf[100];
-     strftime(fnBuf, sizeof(fnBuf), "/frm_%g%m%d_%H%M%S.jpg", &stm);
-     compressor.compressToFile(width_, height_, &withBoxes[0], jpeg_path_ + fnBuf);
+       }
+       struct tm stm;
+       localtime_r(&now, &stm);
+       char fnBuf[100];
+       strftime(fnBuf, sizeof(fnBuf), "/frm_%g%m%d_%H%M%S.jpg", &stm);
+       compressor.compressToFile(width_, height_, &withBoxes[0], jpeg_path_ + fnBuf);
+    }
   }
 #endif
 
