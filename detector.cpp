@@ -48,6 +48,12 @@ std::unique_ptr<Capturer> cap(nullptr);
 std::unique_ptr<Tflow>    tfl(nullptr);
 std::unique_ptr<Tracker>  trk(nullptr);
 
+#define STRINGIFY(m) XSTRINGIFY(m)
+#define XSTRINGIFY(m) #m
+
+unsigned const DEFAULT_WIDTH = 320;
+unsigned const DEFAULT_HEIGHT = 240;
+
 void usage() {
   std::cout << "detector -?qpkrutdfwhbyesml [output]" << std::endl;
   std::cout << "version: 1.0"                     << std::endl;
@@ -64,9 +70,9 @@ void usage() {
   std::cout << "               = 0 to run until ctrl-c"                 << std::endl;
   std::cout << "  (d)device    = video device num    (default = 0)"     << std::endl;
   std::cout << "  (f)ramerate  = capture framerate   (default = 20)"    << std::endl;
-  std::cout << "  (w)idth      = capture width       (default = 640)"   << std::endl;
+  std::cout << "  (w)idth      = capture width       (default = " << DEFAULT_WIDTH << ")" << std::endl;
   std::cout << "               = negative value means flip"             << std::endl;
-  std::cout << "  (h)eight     = capture height      (default = 480)"   << std::endl;
+  std::cout << "  (h)eight     = capture height      (default = " << DEFAULT_HEIGHT << ")"  << std::endl;
   std::cout << "               = negative value means flip"             << std::endl;
   std::cout << "  (b)itrate    = encoder bitrate     (default = 1000000)"  << std::endl;
   std::cout << "  (y)ield time = yield time          (default = 1000usec)" << std::endl;
@@ -74,13 +80,15 @@ void usage() {
   std::cout << "  thre(s)hold  = object detect threshold (default = 0.5)"  << std::endl;
   std::cout << "  t(p)u        = use Edge TPU        (default = false)" << std::endl;
   std::cout << "  trac(k)ing   = track targets       (default = false)" << std::endl;
-  std::cout << "  (m)odel      = path to model       (default = ./models/detect.tflite)"         << std::endl;
+  std::cout << "  (m)odel      = path to model       (default = " << STRINGIFY(MODEL_PATH) << "detect.tflite)" << std::endl;
 #ifndef WITHOUT_EDGETPU
-  std::cout << "                                     (default = ./models/edgetpu_detect.tflite)" << std::endl;
+  std::cout << "                                     (default = " << STRINGIFY(MODEL_PATH) << "edgetpu_detect.tflite)"
+     << std::endl;
 #endif
-  std::cout << "  (l)abels     = path to labels      (default = ./models/labels.txt)"            << std::endl;
+  std::cout << "  (l)abels     = path to labels      (default = " << STRINGIFY(MODEL_PATH) << "labels.txt)"    << std::endl;
 #ifndef WITHOUT_EDGETPU
-  std::cout << "                                     (default = ./models/edgetpu_labels.txt)"    << std::endl;
+  std::cout << "                                     (default = " << STRINGIFY(MODEL_PATH) <<  "edgetpu_labels.txt)" 
+     << std::endl;
 #endif
 #ifdef WITH_JPEG
   std::cout << "  (j)peg       = path to save jpegs  (don't save by default)" << std::endl;
@@ -127,8 +135,8 @@ int main(int argc, char** argv) {
   unsigned int testtime = 30;
   unsigned int device = 0;
   unsigned int framerate = 20;
-           int wdth = 640;
-           int hght = 480;
+           int wdth = DEFAULT_WIDTH;
+           int hght = DEFAULT_HEIGHT;
   unsigned int bitrate = 1000000;
   unsigned int threads = 1;
   float        threshold = 0.5f;
@@ -171,10 +179,13 @@ int main(int argc, char** argv) {
 
   // pick the model and labels
   if (model.empty()) {
-    model = tpu ? "./models/edgetpu_detect.tflite" : "./models/detect.tflite";
+    model = STRINGIFY(MODEL_PATH);
+    model += tpu ? "edgetpu_detect.tflite" : "detect.tflite";
   }
+
   if (labels.empty()) {
-    labels = tpu ? "./models/edgetpu_labels.txt" : "./models/labels.txt";
+    labels = STRINGIFY(MODEL_PATH);
+    labels += tpu ? "edgetpu_labels.txt" : "labels.txt";
   }
 
   // ctrl-c handler
@@ -237,8 +248,8 @@ int main(int argc, char** argv) {
 #ifndef WITHOUT_ENCODER
       enc.get(),
 #endif
-      trk.get(), std::abs(wdth), 
-      std::abs(hght), model.c_str(), labels.c_str(), threads, threshold, tpu);
+      trk.get(), std::abs(wdth), std::abs(hght),
+      model.c_str(), labels.c_str(), threads, threshold, tpu);
 
 #ifdef WITH_JPEG
   if (!jpeg_path.empty()) {

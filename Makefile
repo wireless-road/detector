@@ -110,6 +110,12 @@ endif
 LDFLAGS += -ljpeg
 endif
 
+ifdef OPENWRT
+CFLAGS += -DMODEL_PATH="/etc/models/"
+else
+CFLAGS += -DMODEL_PATH="./models/"
+endif
+
 ifdef WITH_YUV
 SRC += frame_convert.cpp
 ifndef OPENWRT
