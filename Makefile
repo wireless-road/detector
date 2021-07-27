@@ -42,7 +42,7 @@ INCLUDES = \
 	-I$(TFLOWSDK) \
 	-I$(TFLOWSDK)/build/flatbuffers/include \
 	-I$(EDGETPUSDK) \
-	-I$(EDGETPUSDK)/libedgetpu
+	-I$(EDGETPUSDK)/tflite/public
 
 LDFLAGS = \
 	-L$(OMXSUPPORT)/lib \
@@ -55,7 +55,7 @@ LDFLAGS = \
 	-L$(TFLOWSDK)/build/_deps/flatbuffers-build \
 	-L$(TFLOWSDK)/build/_deps/fft2d-build \
 	-L$(TFLOWSDK)/build/_deps/farmhash-build \
-	-L$(EDGETPUSDK)/libedgetpu/direct/armv7a
+	-L$(EDGETPUSDK)
 else
     INCLUDES = -I.
 endif
@@ -68,7 +68,7 @@ LIBS += -lfft2d_fftsg -lfft2d_fftsg2d
 LIBS += -lfarmhash
 
 ifndef WITHOUT_EDGETPU
-LIBS += -l:libedgetpu.so.1.0
+LIBS += -ledgetpu_direct
 else
 CFLAGS += -DWITHOUT_EDGETPU
 endif
