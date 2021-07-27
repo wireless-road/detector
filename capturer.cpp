@@ -285,7 +285,7 @@ bool Capturer::waitingToRun() {
     rb.count = framebuf_num_;
     res = xioctl(fd_video_, VIDIOC_REQBUFS, &rb);
     if (res < 0) {
-      dbgMsg("  failed: request buffers (errno: %d)", errno);
+      dbgMsg("  failed: request %d buffers %s(errno: %d)\n", framebuf_num_, strerror(errno), errno);
       return false;
     }
     dbgMsg("  buffer count: %d\n", rb.count);
