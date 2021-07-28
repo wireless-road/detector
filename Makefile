@@ -68,7 +68,7 @@ LIBS += -lfft2d_fftsg -lfft2d_fftsg2d
 LIBS += -lfarmhash
 
 ifndef WITHOUT_EDGETPU
-LIBS += -ledgetpu_direct
+LIBS += -l:libedgetpu.so.1
 else
 CFLAGS += -DWITHOUT_EDGETPU
 endif
