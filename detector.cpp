@@ -51,6 +51,7 @@ std::unique_ptr<Tracker>  trk(nullptr);
 #define STRINGIFY(m) XSTRINGIFY(m)
 #define XSTRINGIFY(m) #m
 
+unsigned const DEFAULT_FRAMERATE = 15;
 unsigned const DEFAULT_WIDTH = 320;
 unsigned const DEFAULT_HEIGHT = 240;
 
@@ -69,7 +70,7 @@ void usage() {
   std::cout << "  (t)esttime   = test duration       (default = 30sec)" << std::endl;
   std::cout << "               = 0 to run until ctrl-c"                 << std::endl;
   std::cout << "  (d)device    = video device num    (default = 0)"     << std::endl;
-  std::cout << "  (f)ramerate  = capture framerate   (default = 20)"    << std::endl;
+  std::cout << "  (f)ramerate  = capture framerate   (default = " << DEFAULT_FRAMERATE << ")" << std::endl;
   std::cout << "  (w)idth      = capture width       (default = " << DEFAULT_WIDTH << ")" << std::endl;
   std::cout << "               = negative value means flip"             << std::endl;
   std::cout << "  (h)eight     = capture height      (default = " << DEFAULT_HEIGHT << ")"  << std::endl;
@@ -134,7 +135,7 @@ int main(int argc, char** argv) {
   unsigned int yield_time = 1000;
   unsigned int testtime = 30;
   unsigned int device = 0;
-  unsigned int framerate = 20;
+  unsigned int framerate = DEFAULT_FRAMERATE;
            int wdth = DEFAULT_WIDTH;
            int hght = DEFAULT_HEIGHT;
   unsigned int bitrate = 1000000;
