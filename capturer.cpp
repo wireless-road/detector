@@ -232,7 +232,7 @@ bool Capturer::waitingToRun() {
     }
     params.parm.capture.timeperframe.numerator = 1;
     params.parm.capture.timeperframe.denominator = framerate_;
-    params.parm.capture.capturemode |= V4L2_CAP_TIMEPERFRAME;
+    params.parm.capture.capturemode = V4L2_MODE_HIGHQUALITY;
     res = xioctl(fd_video_, VIDIOC_S_PARM, &params);
     if (res < 0) {
       dbgMsg("failed: set stream params\n");
